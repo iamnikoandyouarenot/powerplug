@@ -69,14 +69,14 @@ table{border-collapse:collapse;width:100%;min-width:1180px}
 thead th{position:sticky;top:0;background:#F4F4F0;z-index:2}
 th{font-family:var(--mono);font-size:9.5px;letter-spacing:.09em;text-transform:uppercase;color:var(--ink2);
    font-weight:700;text-align:left;padding:9px 8px;border-bottom:1.5px solid var(--rule);white-space:nowrap;vertical-align:bottom}
-th .u{display:block;font-size:8.5px;letter-spacing:.04em;opacity:.6;text-transform:none}
+th .u{display:block;font-family:var(--mono);font-size:9px;letter-spacing:.03em;opacity:.55;text-transform:none;font-weight:400;margin-top:1px}
 td{padding:4px 6px;border-bottom:1px solid var(--rule2);vertical-align:middle}
 tbody tr:hover{background:#FBFBF8}
 tbody tr.floorsep td{border-top:2px solid var(--rule)}
 td input,td select{width:100%;border:1px solid transparent;background:transparent;padding:5px 6px;border-radius:3px;font-family:inherit;font-size:13px;color:var(--ink)}
 td input:hover,td select:hover{border-color:var(--rule)}
 td input:focus,td select:focus{outline:none;border-color:var(--net);background:#fff;box-shadow:0 0 0 2px rgba(0,144,160,.13)}
-td input.num{text-align:right;font-family:var(--mono);font-size:12.5px;width:62px}
+td input.num{text-align:right;font-family:var(--mono);font-size:12.5px;width:100%;min-width:52px}
 td.name input{font-weight:600;min-width:130px}
 td select{min-width:118px;font-size:12.5px}
 .grp-pwr{border-left:2px solid rgba(198,36,44,.35)}
@@ -95,7 +95,13 @@ tr.dragging{opacity:.35}
 tr.dropbefore td{box-shadow:inset 0 2px 0 var(--pwr)}
 tr.dropafter td{box-shadow:inset 0 -2px 0 var(--pwr)}
 .cfgname{font-weight:600!important;min-width:150px}
-.req{font-family:var(--mono);font-size:13px;font-weight:700;text-align:right;padding-right:10px;white-space:nowrap}
+.req{font-family:var(--mono);font-size:13px;font-weight:700;text-align:right;padding-right:12px;white-space:nowrap}
+th.n{text-align:right;padding-right:12px}
+th.n.sortable{padding-right:20px}
+th.n .u{text-align:right}
+th.c{text-align:center}
+th.c .u{text-align:center}
+td.c{text-align:center}
 .gov{display:block;font-family:var(--mono);font-size:8.5px;font-weight:600;letter-spacing:.04em;color:var(--ink2);text-align:right}
 .verdict{font-family:var(--mono);font-size:10.5px;font-weight:700;letter-spacing:.05em;padding:3px 7px;border-radius:3px;white-space:nowrap;display:inline-block}
 .v-ok{background:var(--okbg);color:var(--ok)} .v-warn{background:var(--warnbg);color:var(--warn)}
@@ -251,15 +257,15 @@ tr.detail>td{background:#F7F8F5;padding:14px 18px 16px;border-bottom:1px solid v
         <th class="sortable" data-s="fl" style="width:60px">樓層<span class="ar">↕</span></th>
         <th class="sortable" data-s="name" style="width:158px">空間名稱<span class="ar">↕</span></th>
         <th class="sortable" data-s="use" style="width:138px">用途分類<span class="ar">↕</span></th>
-        <th class="sortable" data-s="area" style="width:78px">面積<span class="u">m²</span><span class="ar">↕</span></th>
-        <th style="width:70px">牆面總長<span class="u">m 週長</span></th>
-        <th style="width:56px">出入口<span class="u">門數</span></th>
-        <th style="width:56px">工位<span class="u">人數</span></th>
-        <th class="grp-pwr" style="width:72px">現況插座<span class="u">雙插座組數</span></th>
-        <th class="grp-pwr" style="width:82px">建議插座<span class="u">取最嚴格</span></th>
-        <th class="grp-pwr sortable" data-s="ratio" style="width:82px">判定<span class="u">依缺口排序</span><span class="ar">↕</span></th>
-        <th class="grp-net" style="width:64px">現況網路<span class="u">口</span></th>
-        <th class="grp-net" style="width:64px">建議網路<span class="u">口</span></th>
+        <th class="sortable n" data-s="area" style="width:78px" title="空間淨面積">面積<span class="u">m²</span><span class="ar">↕</span></th>
+        <th class="n" style="width:78px" title="房間四周牆面的展開總長（週長）">牆面週長<span class="u">m</span></th>
+        <th class="n" style="width:62px" title="出入口門的數量">出入口<span class="u">門</span></th>
+        <th class="n" style="width:62px" title="常駐工作人數">工位<span class="u">人</span></th>
+        <th class="grp-pwr n" style="width:76px" title="圖面上已配置的雙插座組數">現況插座<span class="u">組</span></th>
+        <th class="grp-pwr n" style="width:86px" title="四種方法取最嚴格者">建議插座<span class="u">組</span></th>
+        <th class="grp-pwr sortable" data-s="ratio" style="width:82px" title="點擊可依缺口大小排序">判定<span class="ar">↕</span></th>
+        <th class="grp-net n" style="width:70px" title="圖面上已配置的資訊出口">現況網路<span class="u">口</span></th>
+        <th class="grp-net n" style="width:70px" title="依工作區密度推算">建議網路<span class="u">口</span></th>
         <th class="grp-net" style="width:74px">判定</th>
         <th style="width:26px"></th>
       </tr></thead>
@@ -280,15 +286,15 @@ tr.detail>td{background:#F7F8F5;padding:14px 18px 16px;border-bottom:1px solid v
     </div>
     <div class="tablewrap">
       <table style="min-width:950px"><thead><tr>
-        <th style="width:170px">用途分類<span class="u">可直接改名</span></th>
-        <th style="width:104px">面積法<span class="u">m² / 每組雙插座</span></th>
-        <th style="width:104px">工位法<span class="u">每工位 雙插座組</span></th>
-        <th style="width:100px">線性法<span class="u">每 m 一組</span></th>
-        <th style="width:82px">最少組數</th>
-        <th style="width:104px">資訊出口<span class="u">m² / 每口</span></th>
-        <th style="width:74px">牆面法<span class="u">3.6 m</span></th>
-        <th style="width:74px">地板插座</th>
-        <th style="width:52px">使用中</th>
+        <th style="width:170px" title="點一下即可改名">用途分類</th>
+        <th class="n" style="width:100px" title="多少平方公尺配一組雙插座　·　數字越大點位越少">面積法<span class="u">m² / 組</span></th>
+        <th class="n" style="width:100px" title="每個工位配幾組雙插座　·　數字越大點位越多">工位法<span class="u">組 / 工位</span></th>
+        <th class="n" style="width:100px" title="每多少公尺牆長配一組　·　數字越大點位越少">線性法<span class="u">m / 組</span></th>
+        <th class="n" style="width:88px" title="此用途的下限，永遠參與比較">最少組數<span class="u">組</span></th>
+        <th class="n" style="width:100px" title="多少平方公尺配一個資訊出口　·　數字越大點位越少">資訊出口<span class="u">m² / 口</span></th>
+        <th class="c" style="width:76px" title="勾選後套用 3.6 m 間距檢核（用戶用電設備裝置規則 §46）">牆面法</th>
+        <th class="c" style="width:76px" title="勾選後對面積 ≥ 20 m² 的空間檢討地板插座">地板插座</th>
+        <th class="n" style="width:62px" title="目前有幾個空間使用此分類">使用中<span class="u">個</span></th>
         <th style="width:30px"></th>
       </tr></thead><tbody id="cfgBody"></tbody></table>
     </div>
@@ -673,7 +679,7 @@ function normCfg(o){
   });
   return o;
 }
-function cbox(k,f,on){return `<td style="text-align:center"><input type="checkbox" ${on?"checked":""} data-c="${k}" data-cf="${f}" style="width:15px;height:15px;accent-color:var(--ok)"></td>`;}
+function cbox(k,f,on){return `<td class="c"><input type="checkbox" ${on?"checked":""} data-c="${k}" data-cf="${f}" style="width:15px;height:15px;accent-color:var(--ok)"></td>`;}
 function renderCfg(){
   document.getElementById("cfgBody").innerHTML=Object.entries(CFG).map(([k,v])=>{
     const n=useCount(k);
