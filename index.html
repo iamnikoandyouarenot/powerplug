@@ -83,6 +83,18 @@ td select{min-width:118px;font-size:12.5px}
 .grp-net{border-left:2px solid rgba(0,144,160,.35)}
 th.grp-pwr{color:var(--pwr)} th.grp-net{color:var(--net)}
 
+th.sortable{cursor:pointer;user-select:none;padding-right:16px;position:relative}
+th.sortable:hover{color:var(--ink);background:#EDEEE9}
+th.sortable .ar{position:absolute;right:5px;bottom:9px;font-size:9px;opacity:.28}
+th.sortable[data-on]{color:var(--ink)}
+th.sortable[data-on] .ar{opacity:1;color:var(--pwr)}
+.dragh{cursor:grab;color:#C3C7CB;font-size:12px;line-height:1;padding:2px 3px;letter-spacing:-1px;display:inline-block}
+.dragh:hover{color:var(--ink2)}
+.dragh:active{cursor:grabbing}
+tr.dragging{opacity:.35}
+tr.dropbefore td{box-shadow:inset 0 2px 0 var(--pwr)}
+tr.dropafter td{box-shadow:inset 0 -2px 0 var(--pwr)}
+.cfgname{font-weight:600!important;min-width:150px}
 .req{font-family:var(--mono);font-size:13px;font-weight:700;text-align:right;padding-right:10px;white-space:nowrap}
 .gov{display:block;font-family:var(--mono);font-size:8.5px;font-weight:600;letter-spacing:.04em;color:var(--ink2);text-align:right}
 .verdict{font-family:var(--mono);font-size:10.5px;font-weight:700;letter-spacing:.05em;padding:3px 7px;border-radius:3px;white-space:nowrap;display:inline-block}
@@ -220,6 +232,7 @@ tr.detail>td{background:#F7F8F5;padding:14px 18px 16px;border-bottom:1px solid v
   <div class="bar">
     <button class="btn pri" id="addRow">＋ 新增空間</button>
     <button class="btn" id="newProj">新專案（清空）</button>
+    <button class="btn" id="sortReset">回建立順序</button>
     <button class="btn" id="expandAll">展開全部計算式</button>
     <button class="btn" id="exportCsv">匯出 CSV</button>
     <button class="btn" id="saveJson">存檔 JSON</button>
@@ -234,17 +247,17 @@ tr.detail>td{background:#F7F8F5;padding:14px 18px 16px;border-bottom:1px solid v
   <div class="tablewrap">
     <table id="tbl">
       <thead><tr>
-        <th style="width:26px"></th>
-        <th style="width:52px">樓層</th>
-        <th style="width:150px">空間名稱</th>
-        <th style="width:130px">用途分類</th>
-        <th style="width:70px">面積<span class="u">m²</span></th>
+        <th style="width:44px"></th>
+        <th class="sortable" data-s="fl" style="width:60px">樓層<span class="ar">↕</span></th>
+        <th class="sortable" data-s="name" style="width:158px">空間名稱<span class="ar">↕</span></th>
+        <th class="sortable" data-s="use" style="width:138px">用途分類<span class="ar">↕</span></th>
+        <th class="sortable" data-s="area" style="width:78px">面積<span class="u">m²</span><span class="ar">↕</span></th>
         <th style="width:70px">牆面總長<span class="u">m 週長</span></th>
         <th style="width:56px">出入口<span class="u">門數</span></th>
         <th style="width:56px">工位<span class="u">人數</span></th>
         <th class="grp-pwr" style="width:72px">現況插座<span class="u">雙插座組數</span></th>
         <th class="grp-pwr" style="width:82px">建議插座<span class="u">取最嚴格</span></th>
-        <th class="grp-pwr" style="width:74px">判定</th>
+        <th class="grp-pwr sortable" data-s="ratio" style="width:82px">判定<span class="u">依缺口排序</span><span class="ar">↕</span></th>
         <th class="grp-net" style="width:64px">現況網路<span class="u">口</span></th>
         <th class="grp-net" style="width:64px">建議網路<span class="u">口</span></th>
         <th class="grp-net" style="width:74px">判定</th>
@@ -254,17 +267,29 @@ tr.detail>td{background:#F7F8F5;padding:14px 18px 16px;border-bottom:1px solid v
     </table>
   </div>
 
-  <details style="margin-top:20px">
-    <summary style="cursor:pointer;font-weight:700;font-size:13.5px;padding:8px 0">調整用途基準值（事務所內規）</summary>
-    <div class="tablewrap" style="margin-top:10px">
-      <table style="min-width:820px"><thead><tr>
-        <th>用途分類</th>
-        <th style="width:110px">面積法<span class="u">m² / 每組雙插座</span></th>
-        <th style="width:110px">工位法<span class="u">每工位 雙插座組</span></th>
-        <th style="width:110px">線性法<span class="u">每 m 一組</span></th>
-        <th style="width:90px">最少組數</th>
-        <th style="width:110px">資訊出口<span class="u">m² / 每口</span></th>
-        <th style="width:90px">地板插座</th>
+  <details style="margin-top:20px" id="cfgPanel">
+    <summary style="cursor:pointer;font-weight:700;font-size:13.5px;padding:8px 0">用途分類與基準值（事務所內規　·　可自訂）</summary>
+    <div class="note" style="margin-top:10px">
+      分類名稱可直接改，也能新增自己的類別（例如「無塵室」「實驗室」「機車停車場」）。
+      數值 <b>0 代表該方法不適用</b>——例如廁所不用面積法，就把面積法填 0，改用「最少組數」控制。
+      這份設定不會被「新專案」清掉，換案子照樣沿用。
+    </div>
+    <div class="bar" style="margin-bottom:10px">
+      <button class="btn pri" id="addUse">＋ 新增用途分類</button>
+      <button class="btn" id="resetUse">還原預設分類</button>
+    </div>
+    <div class="tablewrap">
+      <table style="min-width:950px"><thead><tr>
+        <th style="width:170px">用途分類<span class="u">可直接改名</span></th>
+        <th style="width:104px">面積法<span class="u">m² / 每組雙插座</span></th>
+        <th style="width:104px">工位法<span class="u">每工位 雙插座組</span></th>
+        <th style="width:100px">線性法<span class="u">每 m 一組</span></th>
+        <th style="width:82px">最少組數</th>
+        <th style="width:104px">資訊出口<span class="u">m² / 每口</span></th>
+        <th style="width:74px">牆面法<span class="u">3.6 m</span></th>
+        <th style="width:74px">地板插座</th>
+        <th style="width:52px">使用中</th>
+        <th style="width:30px"></th>
       </tr></thead><tbody id="cfgBody"></tbody></table>
     </div>
   </details>
@@ -481,7 +506,7 @@ function boot(){
   const s=Store.get("mj_rows");
   if(s){try{rows=JSON.parse(s);uid=Math.max(0,...rows.map(r=>r.id));}catch(e){rows=SEED.map(mk);}}
   else rows=SEED.map(mk);
-  const c=Store.get("mj_cfg"); if(c){try{Object.assign(CFG,JSON.parse(c))}catch(e){}}
+  const c=Store.get("mj_cfg"); if(c){try{CFG=normCfg(JSON.parse(c))}catch(e){}}
   const m=Store.get("mj_meta"); if(m){try{Object.assign(META,JSON.parse(m))}catch(e){}}
   const f=Store.get("mj_fl");
   if(f){try{const d=JSON.parse(f);FLOORS=d.FLOORS||[];NOTES=d.NOTES||[];}catch(e){seedFloors();}}
@@ -586,8 +611,9 @@ function render(){
     const c=calc(r), tr=document.createElement("tr");
     if(r.fl!==lastFl){tr.className="floorsep";lastFl=r.fl;}
     const opts=Object.entries(CFG).map(([k,v])=>`<option value="${k}"${k===r.use?" selected":""}>${v.n}</option>`).join("");
+    tr.dataset.ri=i;
     tr.innerHTML=`
-      <td><button class="expbtn" data-x="${i}" title="展開計算式">${openRows.has(r.id)?"▾":"▸"}</button></td>
+      <td style="white-space:nowrap"><span class="dragh" title="拖曳調整順序">⠿</span><button class="expbtn" data-x="${i}" title="展開計算式">${openRows.has(r.id)?"▾":"▸"}</button></td>
       <td><input value="${r.fl}" data-f="fl" data-i="${i}" style="font-family:var(--mono);font-size:12px;font-weight:700"></td>
       <td class="name"><input value="${r.name}" data-f="name" data-i="${i}"></td>
       <td><select data-f="use" data-i="${i}">${opts}</select></td>
@@ -638,12 +664,27 @@ function summary(){
 }
 
 /* ═══ 基準值設定表 ═══ */
+function useCount(k){return rows.filter(r=>r.use===k).length;}
+function normCfg(o){
+  Object.values(o).forEach(v=>{
+    ["sqm","perSta","lin","min","netSqm"].forEach(f=>v[f]=+v[f]||0);
+    v.n=v.n||"未命名"; v.floorBox=!!v.floorBox;
+    v.wall=(v.wall===undefined)?true:!!v.wall;
+  });
+  return o;
+}
+function cbox(k,f,on){return `<td style="text-align:center"><input type="checkbox" ${on?"checked":""} data-c="${k}" data-cf="${f}" style="width:15px;height:15px;accent-color:var(--ok)"></td>`;}
 function renderCfg(){
-  document.getElementById("cfgBody").innerHTML=Object.entries(CFG).map(([k,v])=>`
-    <tr><td style="font-weight:600;padding-left:8px">${v.n}</td>
-    ${["sqm","perSta","lin","min","netSqm"].map(f=>
-      `<td><input class="num" type="number" min="0" step="0.5" value="${v[f]}" data-c="${k}" data-cf="${f}"></td>`).join("")}
-    <td style="padding-left:10px"><input type="checkbox" ${v.floorBox?"checked":""} data-c="${k}" data-cf="floorBox" style="width:15px;height:15px;accent-color:var(--ok)"></td></tr>`).join("");
+  document.getElementById("cfgBody").innerHTML=Object.entries(CFG).map(([k,v])=>{
+    const n=useCount(k);
+    return `<tr>
+      <td><input class="cfgname" value="${esc(v.n)}" data-c="${k}" data-cf="n" placeholder="分類名稱"></td>
+      ${["sqm","perSta","lin","min","netSqm"].map(f=>
+        `<td><input class="num" type="number" min="0" step="0.5" value="${v[f]}" data-c="${k}" data-cf="${f}"></td>`).join("")}
+      ${cbox(k,"wall",v.wall)}${cbox(k,"floorBox",v.floorBox)}
+      <td class="req" style="font-size:11px;color:${n?"var(--ink)":"#B0B5BA"}">${n||"—"}</td>
+      <td><button class="iconbtn" data-cdel="${k}" title="刪除此分類">×</button></td>
+    </tr>`;}).join("");
 }
 
 /* ═══ 樓層彙總與對照（預載 114E01 K12 明細表數量作為範例）═══ */
@@ -822,6 +863,69 @@ function renderChk(){
   document.getElementById("chkProg").textContent=`已完成 ${done} / ${tot} 項`;
 }
 
+/* ═══ 排序 ═══ */
+const SORT={k:null,d:1};
+const COLL=new Intl.Collator("zh-Hant-TW",{numeric:true,sensitivity:"base"});
+const SORTGET={
+  fl  :r=>r.fl||"\uffff",
+  name:r=>r.name||"\uffff",
+  use :r=>(CFG[r.use]||{}).n||"",
+  area:r=>r.area||0,
+  id  :r=>r.id,
+  ratio:r=>{const c=calc(r); if(!c.hasData||!c.req)return 9e9; return r.sock/c.req;}
+};
+function doSort(k){
+  if(SORT.k===k) SORT.d*=-1; else {SORT.k=k;SORT.d=1;}
+  const g=SORTGET[k];
+  rows.sort((a,b)=>{const x=g(a),y=g(b);
+    return (typeof x==="number"?(x-y):COLL.compare(x,y))*SORT.d;});
+  render(); markSort();
+}
+function markSort(){
+  document.querySelectorAll("th.sortable").forEach(th=>{
+    const on=th.dataset.s===SORT.k;
+    if(on){th.dataset.on="1";th.querySelector(".ar").textContent=SORT.d>0?"▲":"▼";}
+    else{delete th.dataset.on;th.querySelector(".ar").textContent="↕";}
+  });
+}
+document.querySelectorAll("th.sortable").forEach(th=>th.onclick=()=>doSort(th.dataset.s));
+document.getElementById("sortReset").onclick=()=>{SORT.k=null;doSort("id");};
+
+/* ═══ 拖曳調整順序 ═══ */
+let dragFrom=null;
+const TBODY=document.getElementById("tbody");
+TBODY.addEventListener("mousedown",e=>{
+  if(!e.target.classList.contains("dragh"))return;
+  const tr=e.target.closest("tr[data-ri]"); if(tr)tr.draggable=true;
+});
+TBODY.addEventListener("dragstart",e=>{
+  const tr=e.target.closest("tr[data-ri]"); if(!tr)return;
+  dragFrom=+tr.dataset.ri; tr.classList.add("dragging");
+  e.dataTransfer.effectAllowed="move"; try{e.dataTransfer.setData("text/plain","")}catch(x){}
+});
+TBODY.addEventListener("dragover",e=>{
+  if(dragFrom===null)return; e.preventDefault();
+  const tr=e.target.closest("tr[data-ri]"); if(!tr)return;
+  TBODY.querySelectorAll(".dropbefore,.dropafter").forEach(x=>x.classList.remove("dropbefore","dropafter"));
+  const b=tr.getBoundingClientRect();
+  tr.classList.add(e.clientY < b.top+b.height/2 ? "dropbefore" : "dropafter");
+});
+TBODY.addEventListener("drop",e=>{
+  if(dragFrom===null)return; e.preventDefault();
+  const tr=e.target.closest("tr[data-ri]"); if(!tr){cleanDrag();return;}
+  let to=+tr.dataset.ri;
+  const b=tr.getBoundingClientRect();
+  if(e.clientY >= b.top+b.height/2) to++;
+  if(to>dragFrom) to--;
+  const [moved]=rows.splice(dragFrom,1); rows.splice(to,0,moved);
+  SORT.k=null; cleanDrag(); render(); markSort();
+});
+TBODY.addEventListener("dragend",cleanDrag);
+function cleanDrag(){
+  dragFrom=null;
+  TBODY.querySelectorAll("tr").forEach(t=>{t.draggable=false;t.classList.remove("dragging","dropbefore","dropafter");});
+}
+
 /* ═══ 事件 ═══ */
 document.querySelectorAll(".tab").forEach(t=>t.onclick=()=>{
   document.querySelectorAll(".tab").forEach(x=>x.setAttribute("aria-selected",x===t));
@@ -878,7 +982,7 @@ document.getElementById("fileIn").onchange=e=>{
   const rd=new FileReader();
   rd.onload=()=>{try{const d=JSON.parse(rd.result);
     if(d.rows){rows=d.rows;uid=Math.max(0,...rows.map(r=>r.id));}
-    if(d.CFG)Object.assign(CFG,d.CFG);
+    if(d.CFG)CFG=normCfg(d.CFG);
     if(d.META)Object.assign(META,d.META);
     if(d.FLOORS)FLOORS=d.FLOORS;
     if(d.NOTES)NOTES=d.NOTES;
@@ -890,9 +994,42 @@ document.getElementById("fileIn").onchange=e=>{
 };
 document.getElementById("doPrint").onclick=()=>window.print();
 document.getElementById("cfgBody").addEventListener("input",e=>{
-  const k=e.target.dataset.c, f=e.target.dataset.cf; if(!k)return;
-  CFG[k][f]=(f==="floorBox")?e.target.checked:(parseFloat(e.target.value)||0); render();
+  const k=e.target.dataset.c, f=e.target.dataset.cf; if(!k||!CFG[k])return;
+  if(f==="n"){                       // 改名不重畫設定表，游標才不會跳
+    CFG[k].n=e.target.value;
+    document.querySelectorAll(`#tbody select[data-f="use"]`).forEach(sel=>{
+      const o=sel.querySelector(`option[value="${k}"]`); if(o)o.textContent=e.target.value;
+    });
+    save(); return;
+  }
+  CFG[k][f]=(f==="floorBox"||f==="wall")?e.target.checked:(parseFloat(e.target.value)||0);
+  render();
 });
+document.getElementById("cfgBody").addEventListener("click",e=>{
+  const k=e.target.dataset.cdel; if(!k)return;
+  const keys=Object.keys(CFG);
+  if(keys.length<2){alert("至少要保留一個用途分類。");return;}
+  const n=useCount(k);
+  const fallback=keys.find(x=>x!==k);
+  if(n && !confirm(`「${CFG[k].n}」目前有 ${n} 個空間在使用。\n刪除後這些空間會改成「${CFG[fallback].n}」，確定嗎？`)) return;
+  if(!n && !confirm(`刪除用途分類「${CFG[k].n}」？`)) return;
+  rows.forEach(r=>{if(r.use===k)r.use=fallback;});
+  delete CFG[k]; renderCfg(); render();
+});
+document.getElementById("addUse").onclick=()=>{
+  const k="u"+Date.now().toString(36);
+  CFG[k]={n:"新用途分類",sqm:5,perSta:0,lin:0,min:1,netSqm:0,floorBox:false,wall:true};
+  renderCfg(); render();
+  const inp=document.querySelector(`[data-c="${k}"][data-cf="n"]`);
+  if(inp){inp.focus();inp.select();inp.scrollIntoView({block:"center"});}
+};
+document.getElementById("resetUse").onclick=()=>{
+  if(!confirm("還原成內建的 18 個用途分類？\n\n你自己新增的分類會被移除，使用到它們的空間會改成「開放辦公區」。\n已改過的數值也會回到預設。")) return;
+  const keep=Object.keys(USES);
+  rows.forEach(r=>{if(!keep.includes(r.use))r.use="open_office";});
+  CFG=normCfg(JSON.parse(JSON.stringify(USES)));
+  renderCfg(); render();
+};
 document.getElementById("chkList").addEventListener("change",e=>{
   if(!e.target.dataset.k)return;
   const st=JSON.parse(Store.get("mj_chk")||"{}");
