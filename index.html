@@ -606,20 +606,24 @@ function render(){
 
     if(openRows.has(r.id)){
       const dt=document.createElement("tr"); dt.className="detail";
-      let boxes=c.methods.map(m=>`<div class="calcbox"><div class="k">${m.k}</div><div class="v">${m.v}</div><div class="d">${m.d}</div></div>`).join("");
-      boxes+=`<div class="calcbox"><div class="k">最少組數</div><div class="v">${c.u.min}</div><div class="d">此用途下限</div></div>`;
-      if(c.fb>0)boxes+=`<div class="calcbox"><div class="k">地板插座</div><div class="v">${c.fb}</div><div class="d">參 NEC 210.71：每 20 m² 一處，須距牆 ≥1.8 m；且不計入牆面數量</div></div>`;
-      if(c.va>0)boxes+=`<div class="calcbox"><div class="k">概估負載 VA</div><div class="v">${c.va.toLocaleString()}</div><div class="d">33 VA/m² + 180 VA/出線口（僅供技師定錨）</div></div>`;
-      if(c.ckt>0)boxes+=`<div class="calcbox"><div class="k">概估分路數</div><div class="v">${c.ckt}</div><div class="d">每 15A 分路約 8 個插孔（經驗值）</div></div>`;
-      let flag="";
-      if(c.fb>0) flag+=`<div class="flag">此空間應檢討<b>地板插座</b>：先確認短邊淨寬 ≥ 3.7 m。地插距牆超過 450 mm 者依 §46 不得計入牆面插座數量。</div>`;
-      if(c.u.n.includes("茶水")||c.u.n.includes("餐廳")) flag+=`<div class="flag">確認<b>冰箱、開飲機、微波爐</b>各自的專用插座與迴路；飲水機分路依規則應裝設漏電斷路器。</div>`;
-      if(c.u.n.includes("廁所")||c.u.n.includes("戶外")) flag+=`<div class="flag">濕區：距任一洗手台外緣 <b>900 mm</b> 內應設一個插座；戶外走廊插座高度不得超過 <b>2 m</b>，並採防水型。</div>`;
-      dt.innerHTML=`<td colspan="15">${dimline(r,c)}<div class="calcgrid">${boxes}</div>${flag}</td>`;
+      dt.innerHTML=detailHTML(r,c);
       tb.appendChild(dt);
     }
   });
   summary(); save();
+}
+
+function detailHTML(r,c){
+  let boxes=c.methods.map(m=>`<div class="calcbox"><div class="k">${m.k}</div><div class="v">${m.v}</div><div class="d">${m.d}</div></div>`).join("");
+  boxes+=`<div class="calcbox"><div class="k">最少組數</div><div class="v">${c.u.min}</div><div class="d">此用途下限</div></div>`;
+  if(c.fb>0)boxes+=`<div class="calcbox"><div class="k">地板插座</div><div class="v">${c.fb}</div><div class="d">參 NEC 210.71：每 20 m² 一處，須距牆 ≥1.8 m；且不計入牆面數量</div></div>`;
+  if(c.va>0)boxes+=`<div class="calcbox"><div class="k">概估負載 VA</div><div class="v">${c.va.toLocaleString()}</div><div class="d">33 VA/m² + 180 VA/出線口（僅供技師定錨）</div></div>`;
+  if(c.ckt>0)boxes+=`<div class="calcbox"><div class="k">概估分路數</div><div class="v">${c.ckt}</div><div class="d">每 15A 分路約 8 個插孔（經驗值）</div></div>`;
+  let flag="";
+  if(c.fb>0) flag+=`<div class="flag">此空間應檢討<b>地板插座</b>：先確認短邊淨寬 ≥ 3.7 m。地插距牆超過 450 mm 者依 §46 不得計入牆面插座數量。</div>`;
+  if(c.u.n.includes("茶水")||c.u.n.includes("餐廳")) flag+=`<div class="flag">確認<b>冰箱、開飲機、微波爐</b>各自的專用插座與迴路；飲水機分路依規則應裝設漏電斷路器。</div>`;
+  if(c.u.n.includes("廁所")||c.u.n.includes("戶外")) flag+=`<div class="flag">濕區：距任一洗手台外緣 <b>900 mm</b> 內應設一個插座；戶外走廊插座高度不得超過 <b>2 m</b>，並採防水型。</div>`;
+  return `<td colspan="15">${dimline(r,c)}<div class="calcgrid">${boxes}</div>${flag}</td>`;
 }
 
 function summary(){
@@ -824,17 +828,21 @@ document.querySelectorAll(".tab").forEach(t=>t.onclick=()=>{
   document.querySelectorAll(".panel").forEach(p=>p.hidden=(p.id!==t.dataset.p));
 });
 document.getElementById("tbody").addEventListener("input",e=>{
-  const el=e.target;
-  if(el.dataset.f!==undefined){
-    const r=rows[+el.dataset.i], f=el.dataset.f;
-    r[f]=(f==="fl"||f==="name"||f==="use")?el.value:(parseFloat(el.value)||0);
-    if(f==="use"||f==="area"||f==="wall"||f==="doors"||f==="sta"||f==="sock"||f==="net"){
-      const pos=el.selectionStart, id=el.dataset.i, ff=f;
-      render();
-      const back=document.querySelector(`[data-i="${id}"][data-f="${ff}"]`);
-      if(back){back.focus();try{back.setSelectionRange(pos,pos)}catch(x){}}
-    } else save();
+  const el=e.target; if(el.dataset.f===undefined)return;
+  const i=+el.dataset.i, r=rows[i], f=el.dataset.f;
+  r[f]=(f==="fl"||f==="name"||f==="use")?el.value:(parseFloat(el.value)||0);
+  // 只改這一列的計算欄位，不重畫表格 —— 游標位置完全不受影響
+  const tr=el.closest("tr");
+  if(tr&&f!=="fl"&&f!=="name"){
+    const c=calc(r), td=tr.cells;
+    td[9].innerHTML=`${c.req||"—"}<span class="gov">${c.req?c.gov:""}</span>`;
+    td[10].innerHTML=verdict(r.sock,c.req,c.hasData);
+    td[12].textContent=c.netReq||"—";
+    td[13].innerHTML=c.netReq>0?verdict(r.net,c.netReq,c.hasData):'<span class="v-na">另議</span>';
+    const dt=tr.nextElementSibling;
+    if(dt&&dt.classList.contains("detail")) dt.innerHTML=detailHTML(r,c);
   }
+  summary(); save();
 });
 document.getElementById("tbody").addEventListener("click",e=>{
   const x=e.target.dataset.x, d=e.target.dataset.d;
@@ -916,18 +924,23 @@ flList.addEventListener("input",e=>{
   if(el.dataset.ff!==undefined){
     const i=+el.dataset.fl, f=el.dataset.ff;
     FLOORS[i][f]=["pwr","net","tel"].includes(f)?(parseInt(el.value)||0):el.value;
-    if(["pwr","net","f"].includes(f)){
-      const pos=el.selectionStart; renderFloors();
-      const back=document.querySelector(`[data-fl="${i}"][data-ff="${f}"]`);
-      if(back){back.focus();try{back.setSelectionRange(pos,pos)}catch(x){}}
-    } else save();
+    // 同樣只更新這張樓層卡的對帳列，上方統計卡等離開欄位後再整體重算
+    const card=el.closest(".fl"), rec=card&&card.querySelector(".recon"), F=FLOORS[i];
+    if(rec){
+      const t=roomTotals(F.f);
+      rec.innerHTML=`<span class="rl">逐室加總對照</span><span>${t.n} 個空間</span>`+
+        `<span>插座 <b>${t.sock}</b> ${diffTag(+F.pwr||0,t.sock,"組")}</span>`+
+        `<span>網路 <b>${t.net}</b> ${diffTag(+F.net||0,t.net,"口")}</span>`;
+    }
+    save();
   }
   if(el.dataset.nf!==undefined){NOTES[+el.dataset.nf].f=el.value;save();}
 });
+/* 離開欄位才整體重算：註記歸位、上方統計卡更新 */
 flList.addEventListener("blur",e=>{
-  if(e.target.dataset&&e.target.dataset.nx!==undefined){
-    NOTES[+e.target.dataset.nx].x=e.target.innerHTML.trim();save();
-  }
+  const d=e.target.dataset; if(!d)return;
+  if(d.nx!==undefined){NOTES[+d.nx].x=e.target.innerHTML.trim();save();}
+  if(d.ff!==undefined||d.nf!==undefined) renderFloors();
 },true);
 flList.addEventListener("change",e=>{
   if(e.target.dataset.nt!==undefined){NOTES[+e.target.dataset.nt].t=e.target.value;renderFloors();}
