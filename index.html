@@ -1,0 +1,966 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>點位檢討工作台 — 114E01 敏鈞龍潭廠房</title>
+<style>
+:root{
+  --paper:#FAFAF7; --card:#FFFFFF; --ink:#16191C; --ink2:#5B6169;
+  --rule:#DCDDD8; --rule2:#EDEEE9;
+  --pwr:#C6242C;      /* 插座：對應圖面紅色點位 */
+  --net:#0090A0;      /* 網路：對應圖面青色 */
+  --tel:#A8368F;      /* 電話：對應圖面洋紅 */
+  --ok:#2E7A52; --warn:#A97400; --bad:#C0392B;
+  --okbg:#EAF4EE; --warnbg:#FBF3E0; --badbg:#FBEBEA;
+  --mono:ui-monospace,"SFMono-Regular","Cascadia Mono",Menlo,Consolas,monospace;
+  --sans:"Noto Sans TC","PingFang TC","Microsoft JhengHei",system-ui,sans-serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{background:var(--paper);color:var(--ink);font-family:var(--sans);font-size:14px;line-height:1.6;-webkit-font-smoothing:antialiased}
+h1,h2,h3{margin:0;font-weight:700;letter-spacing:-.01em}
+a{color:var(--net)}
+button{font-family:inherit;font-size:inherit;cursor:pointer}
+
+/* ── 圖框式標題列 ───────────────────────── */
+.titleblock{border-bottom:2px solid var(--ink);background:var(--card);position:sticky;top:0;z-index:20}
+.tb-inner{max-width:1400px;margin:0 auto;padding:12px 20px;display:flex;align-items:flex-end;gap:0;flex-wrap:wrap}
+.tb-cell{padding:0 16px;border-left:1px solid var(--rule)}
+.tb-cell:first-child{padding-left:0;border-left:0}
+.tb-lab{font-family:var(--mono);font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink2)}
+.tb-val{font-size:14px;font-weight:600;white-space:nowrap}
+.tb-title{font-size:19px;font-weight:800;letter-spacing:-.02em}
+.tb-spacer{flex:1;border:0}
+.tb-in{border:1px solid transparent;border-bottom:1px solid var(--rule);background:transparent;
+  font-family:inherit;font-size:14px;font-weight:600;color:var(--ink);padding:2px 4px;border-radius:3px 3px 0 0}
+.tb-in::placeholder{color:#B7BCC1;font-weight:400}
+.tb-in:hover{background:#F6F6F2;border-bottom-color:var(--ink2)}
+.tb-in:focus{outline:none;background:#fff;border-color:var(--net);border-radius:3px;box-shadow:0 0 0 2px rgba(0,144,160,.13)}
+.tb-mono{font-family:var(--mono);font-size:12.5px}
+.tb-w-sm{width:112px} .tb-w-md{width:172px} .tb-w-lg{width:210px}
+.stamp{font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:.12em;border:1.5px solid var(--pwr);color:var(--pwr);padding:3px 9px;border-radius:2px;transform:rotate(-1.5deg)}
+
+/* ── 分頁 ───────────────────────── */
+.tabs{max-width:1400px;margin:0 auto;padding:0 20px;display:flex;gap:2px;border-bottom:1px solid var(--rule);background:var(--paper);position:sticky;top:62px;z-index:19;flex-wrap:wrap}
+.tab{background:none;border:0;border-bottom:2.5px solid transparent;padding:11px 15px;color:var(--ink2);font-weight:600;font-size:13.5px}
+.tab[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--pwr)}
+.tab:focus-visible{outline:2px solid var(--net);outline-offset:-2px}
+
+.wrap{max-width:1400px;margin:0 auto;padding:22px 20px 80px}
+.panel[hidden]{display:none}
+
+.note{background:var(--card);border:1px solid var(--rule);border-left:3px solid var(--net);padding:12px 15px;margin:0 0 18px;font-size:13px;color:#33393F;border-radius:0 4px 4px 0}
+.note b{color:var(--ink)}
+
+.bar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:14px}
+.btn{background:var(--card);border:1px solid var(--rule);border-radius:4px;padding:6px 13px;font-weight:600;font-size:13px;color:var(--ink)}
+.btn:hover{border-color:var(--ink);background:#fff}
+.btn.pri{background:var(--ink);color:#fff;border-color:var(--ink)}
+.btn.pri:hover{background:#000}
+.btn:focus-visible{outline:2px solid var(--net);outline-offset:2px}
+.savestat{font-family:var(--mono);font-size:10.5px;letter-spacing:.04em;padding:5px 10px;border-radius:3px;margin-left:auto}
+.savestat.on{background:var(--okbg);color:var(--ok)}
+.savestat.off{background:var(--warnbg);color:var(--warn)}
+
+/* ── 表格 ───────────────────────── */
+.tablewrap{background:var(--card);border:1px solid var(--rule);border-radius:5px;overflow-x:auto}
+table{border-collapse:collapse;width:100%;min-width:1180px}
+thead th{position:sticky;top:0;background:#F4F4F0;z-index:2}
+th{font-family:var(--mono);font-size:9.5px;letter-spacing:.09em;text-transform:uppercase;color:var(--ink2);
+   font-weight:700;text-align:left;padding:9px 8px;border-bottom:1.5px solid var(--rule);white-space:nowrap;vertical-align:bottom}
+th .u{display:block;font-size:8.5px;letter-spacing:.04em;opacity:.6;text-transform:none}
+td{padding:4px 6px;border-bottom:1px solid var(--rule2);vertical-align:middle}
+tbody tr:hover{background:#FBFBF8}
+tbody tr.floorsep td{border-top:2px solid var(--rule)}
+td input,td select{width:100%;border:1px solid transparent;background:transparent;padding:5px 6px;border-radius:3px;font-family:inherit;font-size:13px;color:var(--ink)}
+td input:hover,td select:hover{border-color:var(--rule)}
+td input:focus,td select:focus{outline:none;border-color:var(--net);background:#fff;box-shadow:0 0 0 2px rgba(0,144,160,.13)}
+td input.num{text-align:right;font-family:var(--mono);font-size:12.5px;width:62px}
+td.name input{font-weight:600;min-width:130px}
+td select{min-width:118px;font-size:12.5px}
+.grp-pwr{border-left:2px solid rgba(198,36,44,.35)}
+.grp-net{border-left:2px solid rgba(0,144,160,.35)}
+th.grp-pwr{color:var(--pwr)} th.grp-net{color:var(--net)}
+
+.req{font-family:var(--mono);font-size:13px;font-weight:700;text-align:right;padding-right:10px;white-space:nowrap}
+.gov{display:block;font-family:var(--mono);font-size:8.5px;font-weight:600;letter-spacing:.04em;color:var(--ink2);text-align:right}
+.verdict{font-family:var(--mono);font-size:10.5px;font-weight:700;letter-spacing:.05em;padding:3px 7px;border-radius:3px;white-space:nowrap;display:inline-block}
+.v-ok{background:var(--okbg);color:var(--ok)} .v-warn{background:var(--warnbg);color:var(--warn)}
+.v-bad{background:var(--badbg);color:var(--bad)} .v-na{color:#9AA0A6;font-family:var(--mono);font-size:10.5px}
+.iconbtn{border:0;background:none;color:#B0B5BA;padding:3px 6px;font-size:15px;line-height:1;border-radius:3px}
+.iconbtn:hover{color:var(--bad);background:var(--badbg)}
+.expbtn{border:0;background:none;color:var(--ink2);font-family:var(--mono);font-size:11px;padding:3px 5px;border-radius:3px}
+.expbtn:hover{background:var(--rule2);color:var(--ink)}
+
+/* ── 簽名元素：牆面展開覆蓋尺線 ───────────── */
+tr.detail>td{background:#F7F8F5;padding:14px 18px 16px;border-bottom:1px solid var(--rule)}
+.dimcap{font-family:var(--mono);font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink2);margin-bottom:6px}
+.dimwrap{overflow-x:auto;padding-bottom:4px}
+.calcgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:0;margin-top:12px;border-top:1px solid var(--rule)}
+.calcbox{padding:9px 14px 9px 0;border-right:1px solid var(--rule2)}
+.calcbox:last-child{border-right:0}
+.calcbox .k{font-family:var(--mono);font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink2)}
+.calcbox .v{font-family:var(--mono);font-size:15px;font-weight:700}
+.calcbox .d{font-size:11.5px;color:var(--ink2);line-height:1.45}
+.flag{margin-top:10px;font-size:12.5px;background:var(--warnbg);border-left:3px solid var(--warn);padding:7px 12px;border-radius:0 3px 3px 0}
+
+/* ── 卡片 / 清單 ───────────────────────── */
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(285px,1fr));gap:14px;margin-bottom:22px}
+.card{background:var(--card);border:1px solid var(--rule);border-radius:5px;padding:15px 17px}
+.card h3{font-size:13px;letter-spacing:0;margin-bottom:9px}
+.big{font-family:var(--mono);font-size:27px;font-weight:800;letter-spacing:-.02em;line-height:1.1}
+.sub{font-family:var(--mono);font-size:10px;letter-spacing:.09em;text-transform:uppercase;color:var(--ink2)}
+
+.fl{background:var(--card);border:1px solid var(--rule);border-radius:5px;padding:16px 18px;margin-bottom:12px}
+.fl-head{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;border-bottom:1px solid var(--rule);padding-bottom:9px;margin-bottom:10px}
+.fl-id{font-family:var(--mono);font-size:16px;font-weight:800;color:var(--pwr);letter-spacing:.02em}
+.fl-name{font-size:13px;color:var(--ink2);flex:1}
+.counts{display:flex;gap:20px;flex-wrap:wrap;font-family:var(--mono);font-size:12px}
+.counts b{font-size:17px;font-weight:800}
+.c-pwr b{color:var(--pwr)} .c-net b{color:var(--net)} .c-tel b{color:var(--tel)}
+.issues{list-style:none;padding:0;margin:11px 0 0}
+.issues li{padding:8px 0 8px 26px;border-top:1px solid var(--rule2);font-size:13px;position:relative;line-height:1.55}
+.issues li::before{content:attr(data-t);position:absolute;left:0;top:9px;font-family:var(--mono);font-size:9px;font-weight:800;letter-spacing:.05em}
+.issues li.q::before{content:"？";color:var(--warn);font-size:12px}
+.issues li.x::before{content:"✕";color:var(--bad);font-size:11px}
+.issues li.i::before{content:"i";color:var(--net);font-size:12px;font-style:italic}
+
+.recon{display:flex;gap:18px;flex-wrap:wrap;align-items:center;font-family:var(--mono);font-size:11.5px;
+  color:var(--ink2);padding:8px 0 2px;margin-top:6px;border-top:1px dashed var(--rule)}
+.recon .rl{font-size:9px;letter-spacing:.12em;text-transform:uppercase}
+.recon b{font-size:13px;color:var(--ink)}
+.issues li{display:flex;gap:9px;align-items:flex-start}
+.issues li::before{position:static;flex-shrink:0;padding-top:2px}
+.ntype{border:1px solid var(--rule);background:#fff;border-radius:3px;font-family:var(--mono);font-size:10px;
+  padding:2px 3px;color:var(--ink2);flex-shrink:0;margin-top:1px}
+.noteedit{flex:1;min-width:0;padding:2px 6px;border:1px solid transparent;border-radius:3px;line-height:1.55}
+.noteedit:hover{background:#FBFBF8;border-color:var(--rule)}
+.noteedit:focus{outline:none;background:#fff;border-color:var(--net);box-shadow:0 0 0 2px rgba(0,144,160,.13)}
+.chk{background:var(--card);border:1px solid var(--rule);border-radius:5px;margin-bottom:12px;overflow:hidden}
+.chk-h{padding:11px 16px;background:#F4F4F0;border-bottom:1px solid var(--rule);font-weight:700;font-size:13.5px;display:flex;gap:10px;align-items:center}
+.chk-h .n{font-family:var(--mono);font-size:10px;color:var(--ink2);letter-spacing:.1em}
+.chk ul{list-style:none;margin:0;padding:0}
+.chk li{display:flex;gap:11px;align-items:flex-start;padding:9px 16px;border-bottom:1px solid var(--rule2);font-size:13.2px}
+.chk li:last-child{border-bottom:0}
+.chk li:hover{background:#FBFBF8}
+.chk input[type=checkbox]{margin-top:4px;width:15px;height:15px;accent-color:var(--ok);flex-shrink:0}
+.chk .why{display:block;font-size:11.5px;color:var(--ink2);margin-top:1px}
+.chk li.done label{text-decoration:line-through;opacity:.5}
+
+.ref h3{font-size:14px;margin:26px 0 8px;padding-bottom:5px;border-bottom:1px solid var(--rule)}
+.ref h3:first-child{margin-top:0}
+.ref p,.ref li{font-size:13.3px;color:#2C3136}
+.ref blockquote{margin:9px 0;padding:9px 15px;background:var(--card);border:1px solid var(--rule);border-left:3px solid var(--ink);font-size:13px;border-radius:0 4px 4px 0}
+.ref code{font-family:var(--mono);font-size:12px;background:#EFF0EC;padding:1.5px 5px;border-radius:3px}
+.src{font-family:var(--mono);font-size:10.5px;color:var(--ink2);letter-spacing:.03em}
+.warnbox{background:var(--warnbg);border:1px solid #E5D4A8;border-radius:5px;padding:13px 16px;font-size:13px;margin:16px 0}
+
+@media print{
+  .tabs,.bar,.iconbtn,.expbtn,.stamp{display:none!important}
+  body{background:#fff;font-size:11px}
+  .panel[hidden]{display:block!important}
+  .tablewrap,.card,.fl,.chk{border-color:#999;break-inside:avoid}
+  .titleblock{position:static}
+  table{min-width:0}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+@media (max-width:700px){.tb-cell{padding:0 10px}.tabs{top:auto;position:static}}
+</style>
+</head>
+<body>
+
+<header class="titleblock">
+  <div class="tb-inner">
+    <div class="tb-cell">
+      <div class="tb-lab">Tool 工具</div>
+      <div class="tb-title">點位檢討工作台</div>
+    </div>
+    <div class="tb-cell">
+      <div class="tb-lab">Project 專案名稱</div>
+      <input class="tb-in tb-w-lg" id="mProj" placeholder="輸入專案名稱">
+    </div>
+    <div class="tb-cell">
+      <div class="tb-lab">Job No. 案號</div>
+      <input class="tb-in tb-mono tb-w-sm" id="mJob" placeholder="案號">
+    </div>
+    <div class="tb-cell">
+      <div class="tb-lab">Client 業主</div>
+      <input class="tb-in tb-w-md" id="mClient" placeholder="業主名稱">
+    </div>
+    <div class="tb-cell">
+      <div class="tb-lab">Drawing Set 圖說 / 版本</div>
+      <input class="tb-in tb-mono tb-w-md" id="mSet" placeholder="E0.0–E5.3　K12">
+    </div>
+    <div class="tb-cell">
+      <div class="tb-lab">Date 檢討日期</div>
+      <input class="tb-in tb-mono tb-w-sm" id="mDate" type="date">
+    </div>
+    <div class="tb-cell tb-spacer"></div>
+    <div class="tb-cell"><span class="stamp">FOR REVIEW 檢討用</span></div>
+  </div>
+</header>
+
+<nav class="tabs" role="tablist">
+  <button class="tab" role="tab" aria-selected="true" data-p="p1">空間檢討</button>
+  <button class="tab" role="tab" aria-selected="false" data-p="p2">樓層彙總與對照</button>
+  <button class="tab" role="tab" aria-selected="false" data-p="p3">定性檢核表</button>
+  <button class="tab" role="tab" aria-selected="false" data-p="p4">計算依據</button>
+</nav>
+
+<main class="wrap">
+
+<!-- ══════════ P1 空間檢討 ══════════ -->
+<section class="panel" id="p1">
+  <div class="note">
+    填入<b>面積</b>與<b>牆面總長</b>，右側就會算出三種方法的建議數量，並取最嚴格者作為判定基準。
+    面積留空的列不參與判定（顯示「待填」）。基準值可在下方調整成你們事務所的內規。
+  </div>
+
+  <div class="bar">
+    <button class="btn pri" id="addRow">＋ 新增空間</button>
+    <button class="btn" id="newProj">新專案（清空）</button>
+    <button class="btn" id="expandAll">展開全部計算式</button>
+    <button class="btn" id="exportCsv">匯出 CSV</button>
+    <button class="btn" id="saveJson">存檔 JSON</button>
+    <button class="btn" id="loadJson">讀檔 JSON</button>
+    <button class="btn" id="doPrint">列印檢討表</button>
+    <input type="file" id="fileIn" accept=".json" hidden>
+    <span class="savestat" id="saveStat"></span>
+  </div>
+
+  <div class="cards" id="sumCards"></div>
+
+  <div class="tablewrap">
+    <table id="tbl">
+      <thead><tr>
+        <th style="width:26px"></th>
+        <th style="width:52px">樓層</th>
+        <th style="width:150px">空間名稱</th>
+        <th style="width:130px">用途分類</th>
+        <th style="width:70px">面積<span class="u">m²</span></th>
+        <th style="width:70px">牆面總長<span class="u">m 週長</span></th>
+        <th style="width:56px">出入口<span class="u">門數</span></th>
+        <th style="width:56px">工位<span class="u">人數</span></th>
+        <th class="grp-pwr" style="width:72px">現況插座<span class="u">雙插座組數</span></th>
+        <th class="grp-pwr" style="width:82px">建議插座<span class="u">取最嚴格</span></th>
+        <th class="grp-pwr" style="width:74px">判定</th>
+        <th class="grp-net" style="width:64px">現況網路<span class="u">口</span></th>
+        <th class="grp-net" style="width:64px">建議網路<span class="u">口</span></th>
+        <th class="grp-net" style="width:74px">判定</th>
+        <th style="width:26px"></th>
+      </tr></thead>
+      <tbody id="tbody"></tbody>
+    </table>
+  </div>
+
+  <details style="margin-top:20px">
+    <summary style="cursor:pointer;font-weight:700;font-size:13.5px;padding:8px 0">調整用途基準值（事務所內規）</summary>
+    <div class="tablewrap" style="margin-top:10px">
+      <table style="min-width:820px"><thead><tr>
+        <th>用途分類</th>
+        <th style="width:110px">面積法<span class="u">m² / 每組雙插座</span></th>
+        <th style="width:110px">工位法<span class="u">每工位 雙插座組</span></th>
+        <th style="width:110px">線性法<span class="u">每 m 一組</span></th>
+        <th style="width:90px">最少組數</th>
+        <th style="width:110px">資訊出口<span class="u">m² / 每口</span></th>
+        <th style="width:90px">地板插座</th>
+      </tr></thead><tbody id="cfgBody"></tbody></table>
+    </div>
+  </details>
+</section>
+
+<!-- ══════════ P2 樓層對照 ══════════ -->
+<section class="panel" id="p2" hidden>
+  <div class="note">
+    左邊填<b>圖說明細表</b>的樓層數量，工具會自動跟「空間檢討」分頁的<b>逐室加總</b>對帳。
+    兩邊對不起來，通常代表有空間漏列或明細表過濾條件不對——這是送圖前最快的一道自我檢查。
+    下方的<b>檢討註記</b>可自由增刪，內容支援粗體等格式，直接編輯即可。
+  </div>
+  <div class="bar">
+    <button class="btn pri" id="addFloor">＋ 新增樓層</button>
+    <button class="btn" id="addNote">＋ 新增註記</button>
+  </div>
+  <div class="cards" id="flCards"></div>
+  <div id="flList"></div>
+</section>
+
+<!-- ══════════ P3 定性檢核表 ══════════ -->
+<section class="panel" id="p3" hidden>
+  <div class="note">
+    數量算得對、位置不對，還是會在工地被退。這份清單是<b>數字算不出來的部分</b>——勾選狀態會存在瀏覽器裡。
+  </div>
+  <div class="bar"><button class="btn" id="resetChk">清除所有勾選</button><span class="sub" id="chkProg"></span></div>
+  <div id="chkList"></div>
+</section>
+
+<!-- ══════════ P4 依據 ══════════ -->
+<section class="panel ref" id="p4" hidden>
+  <div class="warnbox">
+    <b>這支工具的定位</b>：協助你在<u>建築／室內設計端</u>自我檢討點位的「位置、種類、數量」是否合理完整。
+    分路數、導線線徑、需量因數、契約容量等，仍應由<b>機電技師依實際設備清單計算</b>。
+    工具產出的負載值僅為概估，供你與技師對話時定錨用，不可作為設計依據。
+  </div>
+
+  <h3>一、覆蓋距離：一個插座能服務多長？</h3>
+  <p>台灣<b>《用戶用電設備裝置規則》第 46 條</b>對「住宅場所」的居室有明文，這就是你要的「覆蓋範圍」概念的法源：</p>
+  <blockquote>
+    入口門任一側沿牆壁水平量測 <b>1.8 米</b>以內應裝設一個插座出線口，其餘牆壁距離（含轉角）應再裝設插座出線口之數量以 <b>3.6 米</b>計算，四捨五入計算所得數量之各出線口位置由設計者決定。<br>
+    地板插座出線口不得計入所規定插座出線口數量。但該插座出線口距離牆面 <b>450 毫米</b>以內者，不在此限。
+    <span class="src">— 用戶用電設備裝置規則 §46（經濟部）</span>
+  </blockquote>
+  <p>換句話說：<b>沿牆走，任一點到最近插座不超過 1.8 m</b>，等同插座間距上限 3.6 m。這個數字的物理意義是——常見電器電源線約 1.8～2.0 m，這樣配就不必拉延長線。</p>
+  <p><b>本案的適用性</b>：敏鈞是工廠＋辦公，第 46 條不直接強制。但兩個地方很值得直接套用：</p>
+  <ul>
+    <li><b>R1F 招待所</b>（員工留寢室、多功能活動室、浴室）——供住宿用途，性質最接近條文原意，建議直接依 3.6 m 檢核。</li>
+    <li><b>其他辦公／會議空間</b>——當作事務所內規的「下限」使用。實務上辦公空間會配得比 3.6 m 更密（約 2.5～3 m），因為 3C 設備密度遠高於住宅。</li>
+  </ul>
+  <p>另外幾條同樣是位置規定，本案有對應空間，值得逐一核對：</p>
+  <ul>
+    <li>浴室：距任一洗手台外緣 <b>900 mm</b> 以內應裝設一個插座出線口。</li>
+    <li>陽台及室外走廊：至少一個，且高度不得超過 <b>2 m</b>。</li>
+    <li>地下室及車庫：至少一個（屬建築物公共停車空間者除外）。</li>
+    <li>辦公處所、學校及公共場所之<b>飲水機分路</b>應裝設漏電斷路器（飲水機內建者除外）。</li>
+  </ul>
+
+  <h3>二、面積密度：一個面積要幾個插座？</h3>
+  <p>法規面沒有給「每 X m² 幾個插座」，但給了<b>負載密度</b>，可以反推：</p>
+  <ul>
+    <li>一般照明及插座：<b>每平方米 33 伏安</b>計算。</li>
+    <li>其他出線口：<b>每一出線口 180 伏安</b>。</li>
+    <li>20 A 小型用電器具分路：<b>每一分路 1500 伏安</b>。</li>
+    <li>15／20 A 分路以供應普通電燈及小型電器為限；僅供應移動電器時，容量不得超過分路額定的 80％。</li>
+    <span class="src">— 同規則，分路與幹線章</span>
+  </ul>
+  <p>本工具的「面積法」基準值（辦公 4 m²／組、廠房 25 m²／組……）是<b>實務經驗值，不是法規值</b>，來自一般辦公與廠務空間的配置慣例。請把它當成起始值，依業主的實際設備清單調整；工具裡可以直接改。</p>
+
+  <h3>三、資訊出口（網路／電話）密度</h3>
+  <p>這一塊有明確的國際標準可引用：</p>
+  <ul>
+    <li><b>TIA-569</b>：工作區（work area）以<b>每 10 m² 使用面積一個</b>為典型規劃密度，每個工作區至少一個資訊出口盒。</li>
+    <li><b>TIA-568</b>：每個資訊出口盒建議至少 <b>2 個模組孔</b>（傳統上一語音一資料）。</li>
+    <li>水平配線長度上限 <b>90 m</b>（含跳線總長 100 m）——這條會直接決定你的<b>電信室／資訊機房位置與服務半徑</b>。本案 2F 資訊機房要覆蓋 1F～4F 全區，建議實際量一下最遠點位的走線長度。</li>
+  </ul>
+  <p>本案有一個很值得跟業主確認的成本項：<b>全案共 93 個電話口</b>。若企業已採 IP 電話，這些獨立電話出口可整併為網路口，省下管路、配線與面板成本。這是設計端能主動提出的價值。</p>
+
+  <h3>四、會議／簡報／訓練空間的地板插座</h3>
+  <p>台灣規則沒有針對會議室的地插條文，但可參考美國 NEC 210.71 的量化標準作為內規：<b>寬度 ≥ 3.7 m 且面積 ≥ 20 m² 的會議空間，每 20 m² 至少一個地板插座，且距固定牆 ≥ 1.8 m</b>。</p>
+  <p>本案 <code>E2.1 簡報室</code>、<code>E2.1 人資會議室／會議室×3</code>、<code>E4.1 教育訓練室×2</code>、<code>E3.1 會議室</code> 都適用。注意 §46 的但書：<b>距牆超過 450 mm 的地插不能計入牆面插座數量</b>——所以地插是「額外加的」，不能拿來抵牆插。</p>
+
+  <h3>五、判定門檻</h3>
+  <p>工具的燈號邏輯：現況 ÷ 建議 &lt; 0.85 → <span class="verdict v-bad">不足</span>；0.85～1.5 → <span class="verdict v-ok">適當</span>；&gt; 1.5 → <span class="verdict v-warn">偏多</span>。</p>
+  <p>「偏多」不代表錯。廠房、機房、實驗空間預留餘裕是合理的設計判斷——它只是提醒你：這個數字要能對業主說明理由。</p>
+
+  <h3>六、名詞與單位約定</h3>
+  <p>本工具的「插座」一律以 <b>雙插座組數</b> 計（1 組＝2 個插孔），與你 K12 明細表的「雙插座_牆面 110V」對應。單插座 220V 專用（冰箱、設備）請另列，不計入一般插座密度——它們屬於專用分路，由技師依銘牌值計算。</p>
+</section>
+
+</main>
+
+<script>
+"use strict";
+
+/* ═══ 安全儲存（在沙箱環境會自動降級為記憶體，不會報錯） ═══ */
+const Store={
+  ok:(()=>{try{const k="__t";localStorage.setItem(k,"1");localStorage.removeItem(k);return true}catch(e){return false}})(),
+  mem:{},
+  get(k){try{return this.ok?localStorage.getItem(k):this.mem[k]??null}catch(e){return this.mem[k]??null}},
+  set(k,v){try{this.ok?localStorage.setItem(k,v):this.mem[k]=v}catch(e){this.mem[k]=v}}
+};
+
+/* ═══ 用途分類基準值 ═══
+   sqm      = 每組雙插座服務面積 (m²)，0 = 不以面積判定
+   perSta   = 每工位需要幾組雙插座
+   lin      = 每 X 公尺牆長一組（走廊用），0 = 不適用
+   min      = 最少組數
+   netSqm   = 每個資訊出口服務面積 (m²)，0 = 不以面積判定
+   floorBox = 是否應檢討地板插座
+   wall     = 是否套用 §46 的 3.6 m 牆面法
+*/
+const USES={
+  open_office :{n:"開放辦公區",   sqm:4,  perSta:2.5, lin:0,  min:2, netSqm:10, floorBox:false, wall:true},
+  priv_office :{n:"獨立辦公室",   sqm:5,  perSta:3,   lin:0,  min:2, netSqm:12, floorBox:false, wall:true},
+  meeting     :{n:"會議／簡報室", sqm:5,  perSta:0.5, lin:0,  min:2, netSqm:12, floorBox:true,  wall:true},
+  training    :{n:"教育訓練室",   sqm:5,  perSta:0.5, lin:0,  min:2, netSqm:12, floorBox:true,  wall:true},
+  lobby       :{n:"大廳／門廳",   sqm:12, perSta:0,   lin:0,  min:2, netSqm:0,  floorBox:false, wall:true},
+  pantry      :{n:"茶水間／備餐", sqm:3,  perSta:0,   lin:0,  min:3, netSqm:0,  floorBox:false, wall:true},
+  canteen     :{n:"餐廳／員工餐廳",sqm:12,perSta:0,   lin:0,  min:4, netSqm:0,  floorBox:false, wall:true},
+  corridor    :{n:"走廊／梯廳",   sqm:0,  perSta:0,   lin:18, min:1, netSqm:0,  floorBox:false, wall:false},
+  toilet      :{n:"廁所／浴室",   sqm:0,  perSta:0,   lin:0,  min:1, netSqm:0,  floorBox:false, wall:false},
+  dorm        :{n:"寢室／招待所", sqm:3.5,perSta:0,   lin:0,  min:2, netSqm:15, floorBox:false, wall:true},
+  gym         :{n:"健身／活動室", sqm:8,  perSta:0,   lin:0,  min:3, netSqm:25, floorBox:false, wall:true},
+  production  :{n:"廠房作業區",   sqm:25, perSta:0,   lin:0,  min:2, netSqm:0,  floorBox:false, wall:false},
+  storage     :{n:"倉儲／自動倉", sqm:35, perSta:0,   lin:0,  min:1, netSqm:0,  floorBox:false, wall:false},
+  itroom      :{n:"資訊機房／電信室",sqm:6,perSta:0,  lin:0,  min:4, netSqm:0,  floorBox:false, wall:false},
+  plantroom   :{n:"機電機房",     sqm:0,  perSta:0,   lin:0,  min:2, netSqm:0,  floorBox:false, wall:false},
+  outdoor     :{n:"戶外／雨遮／庭院",sqm:0,perSta:0,  lin:0,  min:1, netSqm:0,  floorBox:false, wall:false},
+  security    :{n:"警衛／中控室", sqm:4,  perSta:3,   lin:0,  min:4, netSqm:8,  floorBox:false, wall:true}
+};
+let CFG=JSON.parse(JSON.stringify(USES));
+
+/* ═══ 預載本案空間（依 K12 平面圖房名）═══
+   [樓層,名稱,用途,面積,牆長,門數,工位,現況插座,現況網路] — 0 表示待填 */
+const SEED=[
+ ["1F","接待大廳","lobby",0,0,2,0,0,0],
+ ["1F","會議室","meeting",0,0,1,0,0,0],
+ ["1F","程式及繪圖室","open_office",0,0,1,0,0,0],
+ ["1F","品管室","open_office",0,0,1,0,0,0],
+ ["1F","精密加工室","production",0,0,2,0,0,0],
+ ["1F","作業區","production",0,0,0,0,0,0],
+ ["1F","自動化倉儲區","storage",0,0,1,0,0,0],
+ ["1F","警衛室","security",0,0,1,0,0,0],
+ ["1F","刀具室","storage",0,0,1,0,0,0],
+ ["1F","蒸餾室","plantroom",0,0,1,0,0,0],
+ ["1F","員工置物室","storage",0,0,1,0,0,0],
+ ["1F","員工入口門廳","lobby",0,0,2,0,0,0],
+ ["1F","工區廁所","toilet",0,0,1,0,0,0],
+ ["1F","電梯機房","plantroom",0,0,1,0,0,0],
+ ["2F","簡報室","meeting",0,0,1,0,0,0],
+ ["2F","互動簡報區","lobby",0,0,0,0,0,0],
+ ["2F","聯合辦公室","open_office",0,0,2,0,0,0],
+ ["2F","人資會議室","meeting",0,0,1,0,0,0],
+ ["2F","會議室（49.55 m²）","meeting",49.55,0,1,0,0,0],
+ ["2F","資訊機房","itroom",0,0,1,0,0,0],
+ ["2F","中控室","security",0,0,1,0,0,0],
+ ["2F","電信室","itroom",0,0,1,0,0,0],
+ ["2F","茶水間","pantry",0,0,1,0,0,0],
+ ["2F","檔案室","storage",0,0,1,0,0,0],
+ ["2F","品保暫存室","storage",0,0,1,0,0,0],
+ ["2F","工具室","storage",0,0,1,0,0,0],
+ ["2F","油庫室","plantroom",0,0,1,0,0,0],
+ ["2F","吸菸室","lobby",0,0,1,0,0,0],
+ ["2F","參觀走道","corridor",0,0,0,0,0,0],
+ ["2F","男廁／女廁","toilet",0,0,2,0,0,0],
+ ["3F","總經理室","priv_office",0,0,1,0,0,0],
+ ["3F","財務辦公室","open_office",0,0,1,0,0,0],
+ ["3F","營業部","open_office",0,0,1,0,0,0],
+ ["3F","後製部","open_office",0,0,1,0,0,0],
+ ["3F","辦公室（3 間）","priv_office",0,0,3,0,0,0],
+ ["3F","人事室","priv_office",0,0,1,0,0,0],
+ ["3F","會議室","meeting",0,0,1,0,0,0],
+ ["3F","檔案室／儲藏室","storage",0,0,2,0,0,0],
+ ["3F","茶水間（2 處）","pantry",0,0,2,0,0,0],
+ ["3F","組裝／目視檢驗","production",0,0,0,0,0,0],
+ ["3F","清潔／螢光檢驗","production",0,0,0,0,0,0],
+ ["3F","焊接／打磨／噴漆","production",0,0,0,0,0,0],
+ ["3F","CNC 區","production",0,0,0,0,0,0],
+ ["3F","倉儲室","storage",0,0,1,0,0,0],
+ ["3F","男廁／女廁／工區廁所","toilet",0,0,3,0,0,0],
+ ["4F","餐廳","canteen",0,0,2,0,0,0],
+ ["4F","準備及回收區","pantry",0,0,1,0,0,0],
+ ["4F","教育訓練室 A","training",0,0,1,0,0,0],
+ ["4F","教育訓練室 B","training",0,0,1,0,0,0],
+ ["4F","客戶辦公室（2 間）","priv_office",0,0,2,0,0,0],
+ ["4F","茶水間（2 處）","pantry",0,0,2,0,0,0],
+ ["4F","無障礙廁所","toilet",0,0,1,0,0,0],
+ ["4F","男廁／女廁／工區廁所","toilet",0,0,3,0,0,0],
+ ["4F","作業區","production",0,0,0,0,0,0],
+ ["4F","空壓機房","plantroom",0,0,1,0,0,0],
+ ["4F","發電機房","plantroom",0,0,1,0,0,0],
+ ["4F","消防泵浦室","plantroom",0,0,1,0,0,0],
+ ["R1F","多功能活動室","gym",0,0,2,0,0,0],
+ ["R1F","健身房","gym",0,0,1,0,0,0],
+ ["R1F","員工留寢室 A","dorm",0,0,1,0,0,0],
+ ["R1F","員工留寢室 B","dorm",0,0,1,0,0,0],
+ ["R1F","浴室／廁所","toilet",0,0,2,0,0,0],
+ ["R1F","儲藏室（2 間）","storage",0,0,2,0,0,0],
+ ["R1F","庭院／運動場","outdoor",0,0,0,0,0,0],
+ ["R1F","儲能系統戶外機房","plantroom",0,0,1,0,0,0],
+ ["R1F","自設變電站","plantroom",0,0,1,0,0,0],
+ ["R1F","冷卻水塔區","outdoor",0,0,0,0,0,0]
+];
+
+let rows=[],uid=0,openRows=new Set();
+const META_KEYS=["proj","job","client","set","date"];
+let META={proj:"敏鈞龍潭廠房建築案",job:"114E01",client:"敏鈞精密股份有限公司",
+          set:"E0.0–E5.3　K12",date:new Date().toISOString().slice(0,10)};
+function paintMeta(){META_KEYS.forEach(k=>{const el=document.getElementById("m"+k[0].toUpperCase()+k.slice(1));if(el)el.value=META[k]||"";});}
+function slug(){return (META.job||"專案").replace(/[\\/:*?"<>|\s]+/g,"_");}
+function mk(a){return {id:++uid,fl:a[0],name:a[1],use:a[2],area:+a[3],wall:+a[4],doors:+a[5],sta:+a[6],sock:+a[7],net:+a[8]};}
+function boot(){
+  const s=Store.get("mj_rows");
+  if(s){try{rows=JSON.parse(s);uid=Math.max(0,...rows.map(r=>r.id));}catch(e){rows=SEED.map(mk);}}
+  else rows=SEED.map(mk);
+  const c=Store.get("mj_cfg"); if(c){try{Object.assign(CFG,JSON.parse(c))}catch(e){}}
+  const m=Store.get("mj_meta"); if(m){try{Object.assign(META,JSON.parse(m))}catch(e){}}
+  const f=Store.get("mj_fl");
+  if(f){try{const d=JSON.parse(f);FLOORS=d.FLOORS||[];NOTES=d.NOTES||[];}catch(e){seedFloors();}}
+  else seedFloors();
+}
+const save=()=>{
+  Store.set("mj_rows",JSON.stringify(rows));
+  Store.set("mj_cfg",JSON.stringify(CFG));
+  Store.set("mj_meta",JSON.stringify(META));
+  Store.set("mj_fl",JSON.stringify({FLOORS:FLOORS,NOTES:NOTES}));
+};
+
+/* ═══ 核心計算 ═══ */
+function calc(r){
+  const u=CFG[r.use]||CFG.open_office, m=[];
+  // 方法 A：牆面法（§46 精神）— 門邊 1.8m 各一，其餘每 3.6m 一個
+  let wallReq=0;
+  if(u.wall && r.wall>0){
+    wallReq=r.doors+Math.round(Math.max(0,r.wall-r.doors*3.6)/3.6);
+    m.push({k:"牆面法",v:wallReq,d:`${r.doors} 門 + (${r.wall} − ${(r.doors*3.6).toFixed(1)}) ÷ 3.6`});
+  }
+  // 方法 B：面積法
+  let areaReq=0;
+  if(u.sqm>0 && r.area>0){ areaReq=Math.ceil(r.area/u.sqm); m.push({k:"面積法",v:areaReq,d:`${r.area} m² ÷ ${u.sqm}`}); }
+  // 方法 C：工位法
+  let staReq=0;
+  if(u.perSta>0 && r.sta>0){ staReq=Math.ceil(r.sta*u.perSta); m.push({k:"工位法",v:staReq,d:`${r.sta} 工位 × ${u.perSta}`}); }
+  // 方法 D：線性法（走廊清潔用）
+  let linReq=0;
+  if(u.lin>0 && r.wall>0){ linReq=Math.ceil(r.wall/u.lin); m.push({k:"線性法",v:linReq,d:`${r.wall} m ÷ ${u.lin}`}); }
+
+  const cands=[wallReq,areaReq,staReq,linReq,u.min].filter(x=>x>0);
+  const req=cands.length?Math.max(...cands):0;
+  let gov="—";
+  if(req>0){
+    if(req===staReq)gov="工位法"; else if(req===areaReq)gov="面積法";
+    else if(req===wallReq)gov="牆面法"; else if(req===linReq)gov="線性法"; else gov="最少值";
+  }
+  // 資訊出口
+  let netReq=0,netGov="—";
+  const wa=Math.max(r.sta||0, u.netSqm>0&&r.area>0?Math.ceil(r.area/u.netSqm):0);
+  if(wa>0){netReq=wa;netGov=(r.sta&&r.sta>=wa)?"工位法":"TIA 10 m² 工作區";}
+  else if(u.netSqm>0){netReq=0;}
+  // 地板插座（參 NEC 210.71）
+  let fb=0; if(u.floorBox && r.area>=20) fb=Math.ceil(r.area/20);
+  // 概估負載（33 VA/m² + 180 VA/出線口）
+  const va=Math.round(r.area*33 + (r.sock*2+r.net)*180);
+  const ckt=r.sock>0?Math.ceil(r.sock*2/8):0;
+  const hasData=r.area>0||r.wall>0||r.sta>0;
+  return {req,gov,methods:m,netReq,netGov,fb,va,ckt,hasData,u};
+}
+function verdict(cur,req,has){
+  if(!has||req<=0) return '<span class="v-na">待填</span>';
+  if(cur<=0) return '<span class="verdict v-bad">未配置</span>';
+  const R=cur/req;
+  if(R<0.85) return `<span class="verdict v-bad">不足 ${Math.round((1-R)*100)}%</span>`;
+  if(R>1.5)  return `<span class="verdict v-warn">偏多 ${Math.round(R*100)}%</span>`;
+  return '<span class="verdict v-ok">適當</span>';
+}
+
+/* ═══ 簽名元素：牆面展開覆蓋尺線 ═══ */
+function dimline(r,c){
+  if(!(c.u.wall&&r.wall>0)) return '<div class="dimcap">牆面展開覆蓋圖</div><div style="font-size:12.5px;color:#5B6169">此用途不套用 3.6 m 牆面法，或牆面總長尚未填寫。</div>';
+  const L=r.wall, PX=Math.max(560,Math.min(1500,L*22)), S=PX/L, H=76, Y=44;
+  let s=`<svg width="${PX+30}" height="${H}" viewBox="0 0 ${PX+30} ${H}" role="img" aria-label="牆面展開覆蓋示意">`;
+  s+=`<g transform="translate(15,0)">`;
+  // 門邊 1.8m 涵蓋帶
+  for(let i=0;i<r.doors;i++){
+    const x=i*3.6*S;
+    s+=`<rect x="${x}" y="${Y-13}" width="${Math.min(3.6*S,PX-x)}" height="26" fill="rgba(198,36,44,.07)"/>`;
+    s+=`<text x="${x+Math.min(3.6*S,PX-x)/2}" y="${Y-18}" font-size="8.5" fill="#C6242C" text-anchor="middle" font-family="ui-monospace,monospace">門 ±1.8m</text>`;
+  }
+  // 尺線本體
+  s+=`<line x1="0" y1="${Y}" x2="${PX}" y2="${Y}" stroke="#16191C" stroke-width="1"/>`;
+  s+=`<line x1="0" y1="${Y-9}" x2="0" y2="${Y+9}" stroke="#16191C" stroke-width="1.5"/>`;
+  s+=`<line x1="${PX}" y1="${Y-9}" x2="${PX}" y2="${Y+9}" stroke="#16191C" stroke-width="1.5"/>`;
+  // 每 3.6m 刻度 + 插座符號
+  const n=Math.floor(L/3.6);
+  for(let i=1;i<=n;i++){
+    const x=i*3.6*S;
+    s+=`<line x1="${x}" y1="${Y-6}" x2="${x}" y2="${Y+6}" stroke="#B0B5BA" stroke-width=".8" stroke-dasharray="2 2"/>`;
+    s+=`<text x="${x}" y="${Y+21}" font-size="8" fill="#8A9096" text-anchor="middle" font-family="ui-monospace,monospace">${(i*3.6).toFixed(1)}</text>`;
+  }
+  // 建議插座位置（每段中點）
+  const need=c.req;
+  for(let i=0;i<need;i++){
+    const x=(i+0.5)*(PX/need);
+    const filled=i<r.sock;
+    s+=`<circle cx="${x}" cy="${Y}" r="5.5" fill="${filled?'#C6242C':'#fff'}" stroke="#C6242C" stroke-width="1.6"/>`;
+    if(filled) s+=`<line x1="${x-2.4}" y1="${Y}" x2="${x+2.4}" y2="${Y}" stroke="#fff" stroke-width="1.3"/>`;
+  }
+  s+=`<text x="0" y="${Y+35}" font-size="9" fill="#5B6169" font-family="ui-monospace,monospace">牆長 ${L} m　／　建議 ${need} 組　／　現況 ${r.sock} 組　（●已配置　○缺口）</text>`;
+  s+=`</g></svg>`;
+  return `<div class="dimcap">牆面展開覆蓋圖　·　刻度 3.6 m　·　§46 間距上限</div><div class="dimwrap">${s}</div>`;
+}
+
+/* ═══ 繪製表格 ═══ */
+function render(){
+  const tb=document.getElementById("tbody"); tb.innerHTML="";
+  let lastFl=null;
+  rows.forEach((r,i)=>{
+    const c=calc(r), tr=document.createElement("tr");
+    if(r.fl!==lastFl){tr.className="floorsep";lastFl=r.fl;}
+    const opts=Object.entries(CFG).map(([k,v])=>`<option value="${k}"${k===r.use?" selected":""}>${v.n}</option>`).join("");
+    tr.innerHTML=`
+      <td><button class="expbtn" data-x="${i}" title="展開計算式">${openRows.has(r.id)?"▾":"▸"}</button></td>
+      <td><input value="${r.fl}" data-f="fl" data-i="${i}" style="font-family:var(--mono);font-size:12px;font-weight:700"></td>
+      <td class="name"><input value="${r.name}" data-f="name" data-i="${i}"></td>
+      <td><select data-f="use" data-i="${i}">${opts}</select></td>
+      <td><input class="num" type="number" min="0" step="0.01" value="${r.area||""}" data-f="area" data-i="${i}"></td>
+      <td><input class="num" type="number" min="0" step="0.1" value="${r.wall||""}" data-f="wall" data-i="${i}"></td>
+      <td><input class="num" type="number" min="0" value="${r.doors||""}" data-f="doors" data-i="${i}"></td>
+      <td><input class="num" type="number" min="0" value="${r.sta||""}" data-f="sta" data-i="${i}"></td>
+      <td class="grp-pwr"><input class="num" type="number" min="0" value="${r.sock||""}" data-f="sock" data-i="${i}"></td>
+      <td class="grp-pwr req">${c.req||"—"}<span class="gov">${c.req?c.gov:""}</span></td>
+      <td class="grp-pwr">${verdict(r.sock,c.req,c.hasData)}</td>
+      <td class="grp-net"><input class="num" type="number" min="0" value="${r.net||""}" data-f="net" data-i="${i}"></td>
+      <td class="grp-net req">${c.netReq||"—"}</td>
+      <td class="grp-net">${c.netReq>0?verdict(r.net,c.netReq,c.hasData):'<span class="v-na">另議</span>'}</td>
+      <td><button class="iconbtn" data-d="${i}" title="刪除此列">×</button></td>`;
+    tb.appendChild(tr);
+
+    if(openRows.has(r.id)){
+      const dt=document.createElement("tr"); dt.className="detail";
+      let boxes=c.methods.map(m=>`<div class="calcbox"><div class="k">${m.k}</div><div class="v">${m.v}</div><div class="d">${m.d}</div></div>`).join("");
+      boxes+=`<div class="calcbox"><div class="k">最少組數</div><div class="v">${c.u.min}</div><div class="d">此用途下限</div></div>`;
+      if(c.fb>0)boxes+=`<div class="calcbox"><div class="k">地板插座</div><div class="v">${c.fb}</div><div class="d">參 NEC 210.71：每 20 m² 一處，須距牆 ≥1.8 m；且不計入牆面數量</div></div>`;
+      if(c.va>0)boxes+=`<div class="calcbox"><div class="k">概估負載 VA</div><div class="v">${c.va.toLocaleString()}</div><div class="d">33 VA/m² + 180 VA/出線口（僅供技師定錨）</div></div>`;
+      if(c.ckt>0)boxes+=`<div class="calcbox"><div class="k">概估分路數</div><div class="v">${c.ckt}</div><div class="d">每 15A 分路約 8 個插孔（經驗值）</div></div>`;
+      let flag="";
+      if(c.fb>0) flag+=`<div class="flag">此空間應檢討<b>地板插座</b>：先確認短邊淨寬 ≥ 3.7 m。地插距牆超過 450 mm 者依 §46 不得計入牆面插座數量。</div>`;
+      if(c.u.n.includes("茶水")||c.u.n.includes("餐廳")) flag+=`<div class="flag">確認<b>冰箱、開飲機、微波爐</b>各自的專用插座與迴路；飲水機分路依規則應裝設漏電斷路器。</div>`;
+      if(c.u.n.includes("廁所")||c.u.n.includes("戶外")) flag+=`<div class="flag">濕區：距任一洗手台外緣 <b>900 mm</b> 內應設一個插座；戶外走廊插座高度不得超過 <b>2 m</b>，並採防水型。</div>`;
+      dt.innerHTML=`<td colspan="15">${dimline(r,c)}<div class="calcgrid">${boxes}</div>${flag}</td>`;
+      tb.appendChild(dt);
+    }
+  });
+  summary(); save();
+}
+
+function summary(){
+  let A=0,S=0,N=0,rq=0,nrq=0,bad=0,todo=0;
+  rows.forEach(r=>{const c=calc(r);A+=r.area;S+=r.sock;N+=r.net;
+    if(c.hasData&&c.req>0){rq+=c.req;nrq+=c.netReq; if(r.sock/c.req<0.85)bad++;} else todo++;});
+  document.getElementById("sumCards").innerHTML=`
+    <div class="card"><h3>已列管空間</h3><div class="big">${rows.length}</div><div class="sub">其中 ${todo} 筆待填面積／牆長</div></div>
+    <div class="card"><h3>插座 現況 / 建議</h3><div class="big" style="color:var(--pwr)">${S} <span style="font-size:15px;color:var(--ink2)">/ ${rq}</span></div><div class="sub">雙插座組數</div></div>
+    <div class="card"><h3>網路口 現況 / 建議</h3><div class="big" style="color:var(--net)">${N} <span style="font-size:15px;color:var(--ink2)">/ ${nrq}</span></div><div class="sub">資訊出口</div></div>
+    <div class="card"><h3>判定不足</h3><div class="big" style="color:${bad?'var(--bad)':'var(--ok)'}">${bad}</div><div class="sub">個空間需複核　·　合計面積 ${A.toFixed(1)} m²</div></div>`;
+}
+
+/* ═══ 基準值設定表 ═══ */
+function renderCfg(){
+  document.getElementById("cfgBody").innerHTML=Object.entries(CFG).map(([k,v])=>`
+    <tr><td style="font-weight:600;padding-left:8px">${v.n}</td>
+    ${["sqm","perSta","lin","min","netSqm"].map(f=>
+      `<td><input class="num" type="number" min="0" step="0.5" value="${v[f]}" data-c="${k}" data-cf="${f}"></td>`).join("")}
+    <td style="padding-left:10px"><input type="checkbox" ${v.floorBox?"checked":""} data-c="${k}" data-cf="floorBox" style="width:15px;height:15px;accent-color:var(--ok)"></td></tr>`).join("");
+}
+
+/* ═══ 樓層彙總與對照（預載 114E01 K12 明細表數量作為範例）═══ */
+const FL_SEED=[
+ {f:"1F",dwg:"E1.0–E1.3",name:"接待大廳・品管室・精密加工室・作業區・自動化倉儲・員工入口",
+  pwr:124,net:13,tel:12,
+  brk:"單插座 220V +30：25　·　單插座 220V 冰箱：1　·　雙插座 110V +30cm：27　·　雙插座 110V +120cm：3　·　雙插座 110V 防水蓋 +30cm：68",
+  is:[["q","全樓層網路口僅 <b>13</b> 個，但 1F 是生產主樓層（作業區、精密加工室、品管室、自動化倉儲區、程式及繪圖室、警衛室）。若業主有<b>機台聯網／MES／生產看板／CCTV</b>需求，此數量明顯不足——建議在送技師前先向業主確認生產設備的網路需求，這是後期最難補的管路。"],
+      ["i","<b>68 個</b>防水蓋插座集中於作業區，占全樓層一半以上。請確認：防水蓋等級是否對應現場環境（切削液、粉塵、清洗區）、是否需搭配漏電保護、以及安裝高度 +30cm 是否會被機台或棧板遮擋。"],
+      ["q","電話 12 ／ 網路 12（+1 @120cm）呈 1:1 配對。若確認走 IP 電話，此樓層的電話出口可整併。"],
+      ["i","1F 有<b>戶外設備區、清洗及回收區、雨遮</b>。依規則，室外走廊插座高度不得超過 2 m 且應為防水型；請確認這些半戶外空間已納入配置。"]]},
+ {f:"2F",dwg:"E2.0–E2.3",name:"簡報區・聯合辦公室・中控室・吸菸室・資訊機房",
+  pwr:120,net:43,tel:42,
+  brk:"雙插座 110V +30cm：118　·　雙插座 110V 防水蓋 +30cm：2",
+  is:[["x","<b>整層沒有任何 220V 插座</b>，但平面上有<b>茶水間</b>。冰箱、開飲機通常需要獨立專用迴路（3F 有 1 個、4F 有 3 個 220V 冰箱插座，唯獨 2F 沒有）。請確認 2F 茶水間是否確實不設冰箱，或屬漏配。"],
+      ["q","電話 42 ／ 網路 43，差 1 個。與 3F 的 29/29 完全配對不同。請確認這個差異是刻意（例如某處只設網路不設電話）還是漏配。"],
+      ["i","聯合辦公室 118 組雙插座對 43 個網路口 ≈ 每工位 2.7 組（5.5 孔）＋1 網路口。電源密度合理；但依 TIA-568，每個工作區建議至少 <b>2 個資訊模組孔</b>，若電話將淘汰，網路口宜提高至每工位 2 個。"],
+      ["q","<b>資訊機房、電信室、中控室</b>都在本層。這三處的機櫃專用插座、UPS、維修插座是否已含在 118 個裡？機房插座通常需獨立標示，不宜與一般辦公混算。"],
+      ["i","簡報室、人資會議室、會議室×3（其一 49.55 m²）——僅 110V 牆插，未見地板插座類型。49.55 m² 的會議室依 NEC 210.71 精神應有 <b>2～3 處地插</b>。"]]},
+ {f:"3F",dwg:"E3.0–E3.3",name:"總經理室・辦公室・後製部・組裝／檢驗／焊接／打磨／噴漆",
+  pwr:72,net:29,tel:29,
+  brk:"單插座 220V 冰箱：1　·　雙插座 110V +30cm：68　·　雙插座 110V 防水蓋 +30cm：3",
+  is:[["i","電話 29 ／ 網路 29 完全配對，是全案最一致的樓層，可作為其他樓層的對照基準。"],
+      ["q","本層含<b>噴漆、焊接、打磨</b>等作業區。噴漆區屬可能的危險場所（易燃性揮發物），該區插座型式與防爆等級需特別標註，請與技師確認是否需列為特殊場所。"],
+      ["q","防水蓋插座僅 <b>3 個</b>，但本層有男廁、女廁、工區廁所、茶水間×2 等濕區。請核對濕區插座是否都採防水蓋型。"],
+      ["i","68 組雙插座對 29 個網路口 ≈ 每工位 2.3 組。辦公區密度略低於 2F，若 3F 工位數相近，可考慮拉齊。"]]},
+ {f:"4F",dwg:"E4.0–E4.3",name:"餐廳・教育訓練室・客戶辦公室・機電機房群",
+  pwr:39,net:8,tel:6,
+  brk:"單插座 220V 冰箱：3　·　雙插座 110V +30cm：31　·　雙插座 110V 冰箱插座 +30cm：1　·　雙插座 110V 防水蓋 +30cm：4",
+  is:[["x","<b>網路口僅 8 個</b>，但本層有教育訓練室×2、客戶辦公室×2、餐廳。訓練室的投影／視訊／無線 AP、客戶辦公室的臨時工位，都需要資訊出口。這是全案網路密度最低的樓層，建議重新檢討。"],
+      ["x","平面 E4.1 標註了 <b>「地插」×2</b>（教育訓練室內），但插座明細表沒有「地板插座」類型——只有「雙插座_牆面 110V」。<b>Revit 族群／類型使用與實際不符</b>，會導致明細表數量與圖面不一致。另依 §46，距牆 &gt;450 mm 的地插不得計入牆面插座數量，兩者應分開統計。"],
+      ["x","命名不一致：同層同時存在「<b>單插座_牆面 220V ／ +30 冰箱</b>」(3 個) 與「<b>雙插座_牆面 110V ／ 冰箱插座_+30cm</b>」(1 個)。同一用途兩種型式與命名，建議統一，否則技師無法判讀哪些需要專用迴路。"],
+      ["q","本層有<b>發電機房、消防泵浦室、空壓機房</b>。這三處各需維修插座與工作照明。防水蓋插座僅 4 個，是否已涵蓋機房與濕區？"],
+      ["q","餐廳僅 39 組全層插座。若餐廳有<b>保溫檯、飲料機、洗碗機、廚房設備</b>，這些通常是 220V 專用迴路，應在圖上分別標示，避免技師誤以為全部是一般插座負載。"]]},
+ {f:"R1F",dwg:"E5.0–E5.3",name:"招待所・健身房・員工留寢室・停車空間・儲能系統戶外機房",
+  pwr:24,net:16,tel:4,
+  brk:"雙插座 110V +30cm：24",
+  is:[["x","<b>網路 16 ／ 插座 24</b>，比例 1:1.5，是全案最異常的。一般空間插座數應遠多於網路口。員工留寢室每床應有床頭插座（各 2 組）、健身房器材與影音、多功能活動室的活動用電——插座數偏低，請重新檢討。"],
+      ["x","<b>整層沒有 220V 插座、沒有防水蓋插座</b>。但本層有<b>浴室、庭院、運動場、冷卻水塔區、自來水水箱、儲能系統戶外機房、自設變電站</b>。依規則：浴室距洗手台外緣 900 mm 內應設插座；室外走廊插座須 ≤2 m 高且防水。此處應有明顯缺口。"],
+      ["q","<b>停車空間</b>（法定 250×550 共 28 席＋自設）：依規則地下室及車庫應設至少一個插座（公共停車空間除外）。另外，是否需預留<b>電動車充電</b>的管路與空間？這是現在業主最常在完工後才提的需求。"],
+      ["i","儲能系統戶外機房、自設變電站（MOF／PT／MVCB／VCB／MP／SC）屬高壓設備區，其維修插座與照明應由技師依專業規範處理，不宜併入一般插座明細表。"]]}
+];
+let FLOORS=[],NOTES=[];
+function seedFloors(){
+  FLOORS=FL_SEED.map(f=>({f:f.f,dwg:f.dwg,name:f.name,pwr:f.pwr,net:f.net,tel:f.tel,brk:f.brk}));
+  NOTES=[]; FL_SEED.forEach(f=>f.is.forEach(([t,x])=>NOTES.push({f:f.f,t:t,x:x})));
+}
+function roomTotals(fl){
+  let sock=0,net=0,n=0;
+  rows.forEach(r=>{ if((r.fl||"").trim()===String(fl).trim()){sock+=r.sock||0;net+=r.net||0;n++;} });
+  return {sock:sock,net:net,n:n};
+}
+function diffTag(sheet,room,unit){
+  if(!sheet&&!room) return '<span class="v-na">—</span>';
+  const d=room-sheet;
+  if(!room) return '<span class="v-na">逐室未填</span>';
+  if(d===0) return '<span class="verdict v-ok">相符</span>';
+  return `<span class="verdict ${Math.abs(d)/Math.max(sheet,1)>0.1?'v-bad':'v-warn'}">${d>0?"+":""}${d} ${unit}</span>`;
+}
+function renderFloors(){
+  const P=FLOORS.reduce((a,b)=>a+(+b.pwr||0),0),
+        N=FLOORS.reduce((a,b)=>a+(+b.net||0),0),
+        T=FLOORS.reduce((a,b)=>a+(+b.tel||0),0);
+  let rs=0,rn=0; FLOORS.forEach(f=>{const t=roomTotals(f.f);rs+=t.sock;rn+=t.net;});
+  document.getElementById("flCards").innerHTML=`
+   <div class="card"><h3>明細表 插座出線口</h3><div class="big" style="color:var(--pwr)">${P}</div>
+     <div class="sub">逐室加總 ${rs}　·　${P||rs?diffTxt(P,rs):"—"}</div></div>
+   <div class="card"><h3>明細表 網路口</h3><div class="big" style="color:var(--net)">${N}</div>
+     <div class="sub">逐室加總 ${rn}　·　${N?`每 1 口對 ${(P/N).toFixed(1)} 個插座`:"—"}</div></div>
+   <div class="card"><h3>明細表 電話口</h3><div class="big" style="color:var(--tel)">${T}</div>
+     <div class="sub">${T?"確認是否仍需獨立設置":"—"}</div></div>
+   <div class="card"><h3>檢討註記</h3><div class="big" style="color:var(--warn)">${NOTES.length}</div>
+     <div class="sub">送技師前建議先釐清</div></div>`;
+
+  document.getElementById("flList").innerHTML=FLOORS.map((f,i)=>{
+    const t=roomTotals(f.f);
+    const ns=NOTES.map((n,j)=>[n,j]).filter(([n])=>String(n.f).trim()===String(f.f).trim());
+    return `<div class="fl">
+      <div class="fl-head">
+        <input class="tb-in tb-mono" style="width:62px;font-size:15px;font-weight:800;color:var(--pwr)" value="${esc(f.f)}" data-fl="${i}" data-ff="f" placeholder="樓層">
+        <input class="tb-in tb-mono" style="width:112px;font-size:11px;color:var(--ink2)" value="${esc(f.dwg)}" data-fl="${i}" data-ff="dwg" placeholder="圖號範圍">
+        <input class="tb-in" style="flex:1;min-width:150px;font-size:13px;font-weight:400;color:var(--ink2)" value="${esc(f.name)}" data-fl="${i}" data-ff="name" placeholder="主要空間">
+        <span class="counts">
+          <span class="c-pwr">插座 <input class="tb-in tb-mono" style="width:56px;text-align:right;font-size:16px;font-weight:800;color:var(--pwr)" type="number" min="0" value="${f.pwr||""}" data-fl="${i}" data-ff="pwr"></span>
+          <span class="c-net">網路 <input class="tb-in tb-mono" style="width:52px;text-align:right;font-size:16px;font-weight:800;color:var(--net)" type="number" min="0" value="${f.net||""}" data-fl="${i}" data-ff="net"></span>
+          <span class="c-tel">電話 <input class="tb-in tb-mono" style="width:52px;text-align:right;font-size:16px;font-weight:800;color:var(--tel)" type="number" min="0" value="${f.tel||""}" data-fl="${i}" data-ff="tel"></span>
+        </span>
+        <button class="iconbtn" data-flx="${i}" title="刪除此樓層">×</button>
+      </div>
+      <input class="tb-in tb-mono" style="width:100%;font-size:12px;color:var(--ink2);font-weight:400" value="${esc(f.brk)}" data-fl="${i}" data-ff="brk" placeholder="類型明細（例：雙插座 110V +30cm：118　·　防水蓋：2）">
+      <div class="recon">
+        <span class="rl">逐室加總對照</span>
+        <span>${t.n} 個空間</span>
+        <span>插座 <b>${t.sock}</b> ${diffTag(+f.pwr||0,t.sock,"組")}</span>
+        <span>網路 <b>${t.net}</b> ${diffTag(+f.net||0,t.net,"口")}</span>
+      </div>
+      <ul class="issues">${ns.map(([n,j])=>`
+        <li class="${n.t}">
+          <select class="ntype" data-nt="${j}">
+            <option value="x"${n.t==="x"?" selected":""}>✕ 應修正</option>
+            <option value="q"${n.t==="q"?" selected":""}>？ 待確認</option>
+            <option value="i"${n.t==="i"?" selected":""}>i 提醒</option>
+          </select>
+          <div class="noteedit" contenteditable="true" data-nx="${j}">${n.x}</div>
+          <button class="iconbtn" data-ndel="${j}" title="刪除此註記">×</button>
+        </li>`).join("")}</ul>
+    </div>`;}).join("")||'<div class="fl" style="color:var(--ink2)">還沒有樓層。按「＋ 新增樓層」開始，或在「空間檢討」填好空間後再回來對帳。</div>';
+
+  const orphan=NOTES.map((n,j)=>[n,j]).filter(([n])=>!FLOORS.some(f=>String(f.f).trim()===String(n.f).trim()));
+  if(orphan.length){
+    document.getElementById("flList").innerHTML+=`<div class="fl">
+      <div class="fl-head"><span class="fl-id" style="color:var(--ink2)">未分類</span>
+      <span class="fl-name">下列註記的樓層名稱找不到對應樓層，改一下樓層欄就會歸位</span></div>
+      <ul class="issues">${orphan.map(([n,j])=>`<li class="${n.t}">
+        <input class="tb-in tb-mono" style="width:60px" value="${esc(n.f)}" data-nf="${j}" placeholder="樓層">
+        <div class="noteedit" contenteditable="true" data-nx="${j}">${n.x}</div>
+        <button class="iconbtn" data-ndel="${j}">×</button></li>`).join("")}</ul></div>`;
+  }
+  save();
+}
+function diffTxt(a,b){ if(!b)return "逐室未填"; const d=b-a; return d===0?"相符":`差 ${d>0?"+":""}${d}`; }
+function esc(v){return String(v??"").replace(/&/g,"&amp;").replace(/"/g,"&quot;").replace(/</g,"&lt;");}
+
+/* ═══ 定性檢核表 ═══ */
+const CHK=[
+ ["A","法規位置條款（用戶用電設備裝置規則）",[
+  ["浴室：距任一洗手台外緣 900 mm 以內設有插座出線口","§46 明文；本案 1F/2F/3F/4F/R1F 皆有廁浴空間"],
+  ["室外走廊、庭院、雨遮：至少一個插座，安裝高度 ≤ 2 m，防水型","R1F 庭院／運動場、1F 雨遮及戶外設備區"],
+  ["地下室／車庫：至少一個插座（公共停車空間除外）","R1F 停車空間 28 席以上"],
+  ["飲水機分路已裝設漏電斷路器（機內建者除外）","規則明列辦公處所、學校及公共場所適用；本案茶水間多處"],
+  ["地板插座距牆 > 450 mm 者，已與牆面插座分開統計","§46 但書；4F 教育訓練室有地插標註"],
+  ["住宿性質空間（R1F 招待所）已依 3.6 m 間距檢核","§46 對供住宿用途空間最直接適用"]]],
+ ["B","專用迴路與設備插座",[
+  ["冰箱：每台獨立專用插座與迴路，型式與高度已標註","2F 茶水間目前未見 220V 冰箱插座"],
+  ["開飲機、微波爐、洗碗機、保溫檯已分別標示","4F 餐廳；避免技師誤計為一般插座負載"],
+  ["生產設備電源以專用迴路標示，未混入一般插座明細","1F 精密加工、3F CNC／焊接／噴漆"],
+  ["電梯機房、消防泵浦室、發電機房、空壓機房設有維修插座與工作照明","1F 電梯機房、4F 三處機房"],
+  ["資訊機房／電信室／中控室的機櫃電源、UPS、維修插座已獨立標示","2F 三處集中"],
+  ["自設變電站、儲能系統戶外機房的用電由技師專案處理","R1F；高壓區不併入一般明細"]]],
+ ["C","資訊與弱電",[
+  ["已與業主確認生產設備聯網需求（機台／MES／看板／CCTV）","1F 目前僅 13 個網路口，這是最難後補的"],
+  ["無線 AP 位置已配置（開放區約每 250–300 m² 一處，需 PoE 網路點）","2F 聯合辦公室、4F 餐廳／訓練室屬大空間"],
+  ["電話口是否仍需獨立設置，已與業主確認（IP 電話可整併）","全案 93 個電話口，整併可省管路成本"],
+  ["最遠點位至機房的水平配線長度 ≤ 90 m","TIA-568；2F 機房需覆蓋 1F–4F 全區"],
+  ["每個工作區至少 2 個模組孔（語音＋資料）","TIA-568 建議值"],
+  ["門禁、對講、廣播、CCTV 的出線口已納入圖面或另有專圖",""]]],
+ ["D","會議、簡報與訓練空間",[
+  ["面積 ≥ 20 m² 且短邊 ≥ 3.7 m 的會議空間已檢討地板插座","2F 會議室 49.55 m²、簡報室；4F 教育訓練室×2"],
+  ["地插位置已與會議桌、家具配置圖對位","避免地插落在走道或桌腳下"],
+  ["投影機、電動布幕、視訊 codec、電視牆的電源與網路已配置",""],
+  ["講台／教師端的電源與資訊出口已配置","4F 教育訓練室×2"]]],
+ ["E","與其他圖面的一致性",[
+  ["插座位置已與家具配置圖套圖，未被櫃體、隔屏、設備遮擋","開放辦公 OA 家具進線位置尤其重要"],
+  ["插座位置已與門扇開啟方向、門弓範圍檢核",""],
+  ["安裝高度標註一致（+30 / +120 / 檯面上）且與立面圖相符","本案已用 +30cm、+120cm 兩種"],
+  ["濕區、半戶外的防水蓋型式與 IP 等級已明確標註","1F 有 68 個防水蓋插座"],
+  ["點位圖已與天花圖（維修孔、AP、感知器）套圖檢核",""]]],
+ ["F","Revit ／ 圖說品質",[
+  ["族群類型命名已統一（同一用途不使用兩種命名）","4F 同時有「單插座 220V 冰箱」與「雙插座 110V 冰箱插座」"],
+  ["平面上的所有點位標註都能在明細表中找到對應類型","4F 平面標「地插」但明細表無此類型"],
+  ["各樓層的電話／網路配對規則一致，差異處有註記","2F 為 42/43，3F 為 29/29"],
+  ["「建立階段」設定正確（本案全部為「使照後」）","確認是否有須於使照前完成者，如警衛室、機房"],
+  ["圖例已標示各符號的種類、電壓、安裝高度、防水與否","給機電技師判讀用"],
+  ["已在圖上聲明「點位為設計參考，容量計算由機電技師辦理」","釐清責任分工"]]]
+];
+function renderChk(){
+  const st=JSON.parse(Store.get("mj_chk")||"{}");
+  document.getElementById("chkList").innerHTML=CHK.map(([id,title,items])=>`
+   <div class="chk">
+     <div class="chk-h"><span class="n">${id}</span>${title}</div>
+     <ul>${items.map((it,j)=>{const key=id+j,d=st[key]?"done":"";
+       return `<li class="${d}"><input type="checkbox" id="c${key}" data-k="${key}" ${st[key]?"checked":""}>
+       <label for="c${key}">${it[0]}${it[1]?`<span class="why">${it[1]}</span>`:""}</label></li>`}).join("")}</ul>
+   </div>`).join("");
+  const tot=CHK.reduce((a,b)=>a+b[2].length,0), done=Object.values(st).filter(Boolean).length;
+  document.getElementById("chkProg").textContent=`已完成 ${done} / ${tot} 項`;
+}
+
+/* ═══ 事件 ═══ */
+document.querySelectorAll(".tab").forEach(t=>t.onclick=()=>{
+  document.querySelectorAll(".tab").forEach(x=>x.setAttribute("aria-selected",x===t));
+  document.querySelectorAll(".panel").forEach(p=>p.hidden=(p.id!==t.dataset.p));
+});
+document.getElementById("tbody").addEventListener("input",e=>{
+  const el=e.target;
+  if(el.dataset.f!==undefined){
+    const r=rows[+el.dataset.i], f=el.dataset.f;
+    r[f]=(f==="fl"||f==="name"||f==="use")?el.value:(parseFloat(el.value)||0);
+    if(f==="use"||f==="area"||f==="wall"||f==="doors"||f==="sta"||f==="sock"||f==="net"){
+      const pos=el.selectionStart, id=el.dataset.i, ff=f;
+      render();
+      const back=document.querySelector(`[data-i="${id}"][data-f="${ff}"]`);
+      if(back){back.focus();try{back.setSelectionRange(pos,pos)}catch(x){}}
+    } else save();
+  }
+});
+document.getElementById("tbody").addEventListener("click",e=>{
+  const x=e.target.dataset.x, d=e.target.dataset.d;
+  if(x!==undefined){const id=rows[+x].id; openRows.has(id)?openRows.delete(id):openRows.add(id); render();}
+  if(d!==undefined){ if(confirm(`確定刪除「${rows[+d].name}」？`)){rows.splice(+d,1);render();} }
+});
+document.getElementById("addRow").onclick=()=>{
+  rows.push(mk(["","新空間","open_office",0,0,1,0,0,0])); render();
+  const inp=document.querySelector(`[data-i="${rows.length-1}"][data-f="name"]`); if(inp){inp.focus();inp.select();}
+};
+document.getElementById("expandAll").onclick=e=>{
+  if(openRows.size) openRows.clear(); else rows.forEach(r=>openRows.add(r.id));
+  e.target.textContent=openRows.size?"收合全部計算式":"展開全部計算式"; render();
+};
+document.getElementById("exportCsv").onclick=()=>{
+  const H=["樓層","空間名稱","用途","面積m2","牆長m","門數","工位","現況插座","建議插座","控制方法","插座判定","現況網路","建議網路","地板插座","概估VA"];
+  const L=rows.map(r=>{const c=calc(r);
+    const v=c.hasData&&c.req>0?(r.sock/c.req<0.85?"不足":(r.sock/c.req>1.5?"偏多":"適當")):"待填";
+    return [r.fl,r.name,(CFG[r.use]||{}).n,r.area,r.wall,r.doors,r.sta,r.sock,c.req,c.gov,v,r.net,c.netReq,c.fb,c.va];});
+  const csv="\uFEFF"+[H,...L].map(a=>a.map(x=>`"${String(x??"").replace(/"/g,'""')}"`).join(",")).join("\r\n");
+  dl(new Blob([csv],{type:"text/csv;charset=utf-8"}),`點位檢討_${slug()}.csv`);
+};
+document.getElementById("saveJson").onclick=()=>{
+  const d={v:2,saved:new Date().toISOString(),META:META,rows:rows,CFG:CFG,
+           FLOORS:FLOORS,NOTES:NOTES,chk:JSON.parse(Store.get("mj_chk")||"{}")};
+  dl(new Blob([JSON.stringify(d,null,1)],{type:"application/json"}),
+     `點位檢討_${slug()}_${new Date().toISOString().slice(0,10)}.json`);
+  flash("已存檔　·　含標頭、空間清單、樓層對照、註記、基準值、檢核表");
+};
+document.getElementById("loadJson").onclick=()=>document.getElementById("fileIn").click();
+document.getElementById("fileIn").onchange=e=>{
+  const f=e.target.files[0]; if(!f)return;
+  const rd=new FileReader();
+  rd.onload=()=>{try{const d=JSON.parse(rd.result);
+    if(d.rows){rows=d.rows;uid=Math.max(0,...rows.map(r=>r.id));}
+    if(d.CFG)Object.assign(CFG,d.CFG);
+    if(d.META)Object.assign(META,d.META);
+    if(d.FLOORS)FLOORS=d.FLOORS;
+    if(d.NOTES)NOTES=d.NOTES;
+    if(d.chk)Store.set("mj_chk",JSON.stringify(d.chk));
+    paintMeta();renderCfg();render();renderFloors();renderChk();
+    flash(`已讀入 ${d.rows?d.rows.length:0} 個空間${d.saved?"　·　存檔於 "+d.saved.slice(0,16).replace("T"," "):""}`);
+  }catch(x){alert("檔案讀不出來。請確認選到的是本工具匯出的 JSON。")}};
+  rd.readAsText(f); e.target.value="";
+};
+document.getElementById("doPrint").onclick=()=>window.print();
+document.getElementById("cfgBody").addEventListener("input",e=>{
+  const k=e.target.dataset.c, f=e.target.dataset.cf; if(!k)return;
+  CFG[k][f]=(f==="floorBox")?e.target.checked:(parseFloat(e.target.value)||0); render();
+});
+document.getElementById("chkList").addEventListener("change",e=>{
+  if(!e.target.dataset.k)return;
+  const st=JSON.parse(Store.get("mj_chk")||"{}");
+  st[e.target.dataset.k]=e.target.checked; Store.set("mj_chk",JSON.stringify(st));
+  e.target.closest("li").classList.toggle("done",e.target.checked);
+  const tot=CHK.reduce((a,b)=>a+b[2].length,0), done=Object.values(st).filter(Boolean).length;
+  document.getElementById("chkProg").textContent=`已完成 ${done} / ${tot} 項`;
+});
+document.getElementById("resetChk").onclick=()=>{
+  if(confirm("清除所有勾選狀態？")){Store.set("mj_chk","{}");renderChk();}
+};
+/* 標頭欄位 */
+META_KEYS.forEach(k=>{
+  const el=document.getElementById("m"+k[0].toUpperCase()+k.slice(1));
+  if(el) el.addEventListener("input",()=>{META[k]=el.value;save();});
+});
+
+/* 樓層彙總 */
+document.getElementById("addFloor").onclick=()=>{
+  FLOORS.push({f:"",dwg:"",name:"",pwr:0,net:0,tel:0,brk:""}); renderFloors();
+  const first=document.querySelector('[data-ff="f"]'); if(first)first.focus();
+};
+document.getElementById("addNote").onclick=()=>{
+  NOTES.push({f:FLOORS.length?FLOORS[0].f:"",t:"q",x:"新的檢討註記"}); renderFloors();
+};
+const flList=document.getElementById("flList");
+flList.addEventListener("input",e=>{
+  const el=e.target;
+  if(el.dataset.ff!==undefined){
+    const i=+el.dataset.fl, f=el.dataset.ff;
+    FLOORS[i][f]=["pwr","net","tel"].includes(f)?(parseInt(el.value)||0):el.value;
+    if(["pwr","net","f"].includes(f)){
+      const pos=el.selectionStart; renderFloors();
+      const back=document.querySelector(`[data-fl="${i}"][data-ff="${f}"]`);
+      if(back){back.focus();try{back.setSelectionRange(pos,pos)}catch(x){}}
+    } else save();
+  }
+  if(el.dataset.nf!==undefined){NOTES[+el.dataset.nf].f=el.value;save();}
+});
+flList.addEventListener("blur",e=>{
+  if(e.target.dataset&&e.target.dataset.nx!==undefined){
+    NOTES[+e.target.dataset.nx].x=e.target.innerHTML.trim();save();
+  }
+},true);
+flList.addEventListener("change",e=>{
+  if(e.target.dataset.nt!==undefined){NOTES[+e.target.dataset.nt].t=e.target.value;renderFloors();}
+});
+flList.addEventListener("click",e=>{
+  const fx=e.target.dataset.flx, nd=e.target.dataset.ndel;
+  if(fx!==undefined&&confirm(`刪除樓層「${FLOORS[+fx].f||"未命名"}」？該樓層的註記會移到「未分類」。`)){FLOORS.splice(+fx,1);renderFloors();}
+  if(nd!==undefined){NOTES.splice(+nd,1);renderFloors();}
+});
+
+/* 新專案 */
+document.getElementById("newProj").onclick=()=>{
+  if(!confirm("清空所有資料，開始新專案？\n\n空間清單、樓層對照、檢討註記、檢核表勾選都會清掉，標頭欄位也會空白。\n用途分類基準值會保留。\n\n建議先按「存檔 JSON」備份現在這份。")) return;
+  rows=[];uid=0;openRows.clear();FLOORS=[];NOTES=[];
+  META={proj:"",job:"",client:"",set:"",date:new Date().toISOString().slice(0,10)};
+  Store.set("mj_chk","{}");
+  paintMeta();render();renderFloors();renderChk();
+  flash("已清空　·　可以開始新專案了");
+};
+
+function dl(blob,name){const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1500);}
+
+const SS=document.getElementById("saveStat");
+const idleStat=()=>{
+  SS.className="savestat "+(Store.ok?"on":"off");
+  SS.textContent=Store.ok?"自動存檔 開啟　·　資料留在這台電腦的瀏覽器"
+                         :"自動存檔 停用　·　離開前請按「存檔 JSON」";
+};
+function flash(msg){
+  SS.className="savestat on"; SS.textContent=msg;
+  clearTimeout(flash.t); flash.t=setTimeout(idleStat,5000);
+}
+boot(); paintMeta(); renderCfg(); render(); renderFloors(); renderChk(); idleStat();
+</script>
+</body>
+</html>
